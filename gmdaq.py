@@ -72,8 +72,8 @@ class GMDAQ():
     def __record_data(self, data):
         self.__counts += 1
         if self.__counts % self.__counts_per_file == 0: self.__of = self.__getNewDataFile()
-        self.__f.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
-        self.__f.write(str(time.time())+'\n')
+        self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
+        self.__of.write(str(time.time())+'\n')
         sys.stdout.flush()
 
     def __getNewDataFile(self):
