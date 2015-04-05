@@ -23,7 +23,7 @@ class GMSER():
             logevent(self.__logfile,"ERROR: Serial port couldn't be opened")
             portOpen=False
             return
-        self.portOpen=ser.isOpen()
+        self.portOpen=self.__ser.isOpen()
         if self.portOpen:
             logevent(self.__logfile,'Serial port opened')
         else:
@@ -71,8 +71,7 @@ class GMDAQ():
         
     def __record_data(self, data):
         self.__counts += 1
-        if self.__counts % self.__counts_per_file == 0: self.__getNewDataFile()
-        print data
+        if self.__counts % self.__counts_per_file == 0: self.__of = self.__getNewDataFile()
         self.__f.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
         self.__f.write(str(time.time())+'\n')
         sys.stdout.flush()
