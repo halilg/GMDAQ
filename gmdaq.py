@@ -74,16 +74,19 @@ class GMDAQ():
         if self.__counts % self.__counts_per_file == 0: self.__of = self.__getNewDataFile()
         self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
         self.__of.write(str(time.time())+'\n')
+        #print data,
         sys.stdout.flush()
 
     def __getNewDataFile(self):
         self.__ofname=self.__datafnprefix+self.__uuds.pop()+self.__datafnpostfix
         self.__ofname=os.path.join(self.__datadir,self.__ofname)
-        print self.__ofname
         return file(self.__ofname,'w')
 
     def start(self):
         self.__of=self.__getNewDataFile()
+        logevent(self.__logfile,"Starting data taking")
+        logevent(self.__logfile,"Writing data to: "+self.__ofname)
+        print 'Taking data to:',self.__ofname
         self.__DAQ.run_forever()
         
 
