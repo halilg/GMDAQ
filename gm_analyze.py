@@ -1,13 +1,21 @@
 #!/usr/bin/env python
 import os,sys,datetime,time
 
+if len(sys.argv) == 1:
+    print 'usage:', sys.argv[0],'<data file>'
+    sys.exit()
 
-fname="data_bent0.txt"
+
+fname=sys.argv[1]
 #fname="data_horiz0.txt"
 #fname="data_vert0.txt"
 
-data_raw=file(fname).readlines()
-
+try:
+    data_raw=file(fname).readlines()
+except:
+    print 'Failed to open file:', fname
+    sys.exit()
+    
 data={}
 
 for datum_raw in data_raw:
@@ -32,7 +40,7 @@ csum=0.
 for day in sorted(thismonthsdata.keys()):
     for hour in sorted(thismonthsdata[day].keys()):
         for minute in sorted(thismonthsdata[day][hour].keys()):
-            print str(hour)+":"+str(minute), thismonthsdata[day][hour][minute]
+            print '%02d:%02d %3d' % (int(hour), int(minute), thismonthsdata[day][hour][minute])
             cnt+=1
             csum+=thismonthsdata[day][hour][minute]
 
