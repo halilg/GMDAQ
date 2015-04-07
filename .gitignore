@@ -45,3 +45,4 @@ data
 *.pdf
 *.png
 *_old*
+*.svg

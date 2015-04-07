@@ -1,27 +1,30 @@
 #!/usr/bin/env python
 
-import os,sys, time
+import os,sys,stat, time
 
 pipe_name = 'ipc.io'
 
 class transmitter:
     __out = None
     def __init__(self):
-        try:
-            os.mkfifo(pipe_name)
-        except OSError, e:
-            print "Failed to create FIFO: %s" % e
-        else:
-            self.__out = open(pipe_name, 'a')
+        create = not (os.path.exists(pipe_name) and stat.S_ISFIFO(os.stat(pipe_name).st_mode))
+        if create:
+            try:
+                os.mkfifo(pipe_name)
+            except OSError, e:
+                print "Failed to create FIFO: %s" % e
+                sys.exit()
+        self.__out = os.open(pipe_name, os.O_WRONLY)
     
     def send(self):
         try:
             while True:
                 msg=raw_input('Message: ')
-                print >> self.__out, msg
+                os.write(self.__out, msg+'\n')
         except KeyboardInterrupt:
-            try: self.__out.close()
-            except: pass
+            os.close(self.__out)
+            sys.exit()
+            
 
 class receiver:
     def __init__(self):
@@ -29,8 +32,15 @@ class receiver:
     
     def listen(self):
         while True:
-            line = self.__pipein.readline()[:-1]
-            print 'Received %s' % (line)
+            try:
+                line = self.__pipein.readline()
+                if line == '': # other party left
+                    self.__pipein.close()
+                    sys.exit()
+            except KeyboardInterrupt:
+                self.__pipein.close()
+                sys.exit()
+            print 'Received %s' % (line.strip())
 
     
 if __name__ == '__main__':
