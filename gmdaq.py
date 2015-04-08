@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import serial,os,sys,datetime,time,uuid
-import logging
+import logging, logging.handlers
+
 
 def getuuids(maxuuids):
     uuds=[]
@@ -21,7 +22,7 @@ class GMSER():
         try:
             self.__ser = serial.Serial(port, baud)
         except OSError:
-            self.__logger.error("ERROR: Serial port couldn't be opened")
+            self.__logger.error("Serial port couldn't be opened")
             portOpen=False
             return
         self.portOpen=self.__ser.isOpen()
@@ -95,19 +96,29 @@ class GMDAQ():
         
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        filename='GMDAQ.log',
-        format='%(levelname)s:%(asctime)s %(message)s',
-        level=logging.DEBUG)
+    #logging.basicConfig(
+    #    format='%(levelname)s:%(asctime)s %(message)s',
+    #    level=logging.DEBUG)
+    logger = logging.getLogger('gmdaq')
+    rfh = logging.handlers.RotatingFileHandler('GMDAQ.log',
+                                               maxBytes=1000,
+                                               backupCount=100,
+                                               )
+    #fh = logging.FileHandler()
+    rfh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(levelname)s:%(asctime)s %(message)s')
+    rfh.setFormatter(formatter)
+    logger.addHandler(rfh)
+
     mydaq=GMDAQ(logger)
     if not mydaq.portOpen:
-        logfile.close()
+        logger.error("Couldn't open serial port. Exiting.")
         sys.exit()
     try:
         mydaq.start()
     except KeyboardInterrupt:
         pass
-    logfile.close()
+    fh.close()
     
 
 
