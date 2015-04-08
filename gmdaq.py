@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import serial,os,sys,datetime,time,uuid
+import logging
 
 def getuuids(maxuuids):
     uuds=[]
@@ -13,21 +14,21 @@ def logevent(lf, message):
 
 class GMSER():
     portOpen=False
-    def __init__(self, logfile):
-        self.__logfile = logfile
-    
+    def __init__(self, logger):
+        self.__logger = logger
+            
     def connect(self, port='/dev/ttyUSB0', baud=9600):
         try:
             self.__ser = serial.Serial(port, baud)
         except OSError:
-            logevent(self.__logfile,"ERROR: Serial port couldn't be opened")
+            self.__logger.error("ERROR: Serial port couldn't be opened")
             portOpen=False
             return
         self.portOpen=self.__ser.isOpen()
         if self.portOpen:
-            logevent(self.__logfile,'Serial port opened')
+            self.__logger.info('Serial port opened')
         else:
-            logevent(self.__logfile,'Serial port open timeout')
+            self.__logger.info('Serial port open timeout')
         
     def register_cb(self, fncref):
         self.__callback=fncref
@@ -60,9 +61,9 @@ class GMDAQ():
     __logfile = None
     portOpen = False
     
-    def __init__(self, logfile):
-        self.__logfile = logfile
-        self.__DAQ=GMSER(self.__logfile)
+    def __init__(self, logger):
+        self.__logger = logger
+        self.__DAQ=GMSER(self.__logger)
         self.__DAQ.connect()
         self.portOpen = self.__DAQ.portOpen
         if not self.portOpen: return
@@ -82,17 +83,23 @@ class GMDAQ():
         self.__ofname=os.path.join(self.__datadir,self.__ofname)
         return file(self.__ofname,'w')
 
+    def setLogger(logger):
+        self.__log=logger
+
     def start(self):
         self.__of=self.__getNewDataFile()
-        logevent(self.__logfile,"Starting data taking")
-        logevent(self.__logfile,"Writing data to: "+self.__ofname)
+        self.__logger.info("Starting data taking")
+        self.__logger.info("Writing data to: "+self.__ofname)
         print 'Taking data to:',self.__ofname
         self.__DAQ.run_forever()
         
 
 if __name__ == '__main__':
-    logfile=file('GMDAQ.log','a')
-    mydaq=GMDAQ(logfile)
+    logging.basicConfig(
+        filename='GMDAQ.log',
+        format='%(levelname)s:%(asctime)s %(message)s',
+        level=logging.DEBUG)
+    mydaq=GMDAQ(logger)
     if not mydaq.portOpen:
         logfile.close()
         sys.exit()

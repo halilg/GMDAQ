@@ -4,17 +4,27 @@ import os,sys,stat, time
 
 pipe_name = 'ipc.io'
 
-class transmitter:
-    __out = None
+class mkfifo:
     def __init__(self):
+        pass
+
+    def makeNPipe(self, pname):
         create = not (os.path.exists(pipe_name) and stat.S_ISFIFO(os.stat(pipe_name).st_mode))
         if create:
             try:
-                os.mkfifo(pipe_name)
+                os.mkfifo(pname)
             except OSError, e:
-                print "Failed to create FIFO: %s" % e
-                sys.exit()
+                #print "Failed to create FIFO: %s" % e
+                return e
+        
+class transmitter(mkfifo):
+    __out = None
+    def __init__(self):
+        self.makeNPipe(pipe_name)
+        print "Waiting for connection..",
+        sys.stdout.flush()
         self.__out = os.open(pipe_name, os.O_WRONLY)
+        print "Connected"
     
     def send(self):
         try:
@@ -26,9 +36,14 @@ class transmitter:
             sys.exit()
             
 
-class receiver:
+class receiver(mkfifo):
+    __pipein = None
     def __init__(self):
+        self.makeNPipe(pipe_name)
+        print "Waiting for connection..",
+        sys.stdout.flush()
         self.__pipein = open(pipe_name, 'r')
+        print "Connected"
     
     def listen(self):
         while True:
