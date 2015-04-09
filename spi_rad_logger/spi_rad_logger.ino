@@ -43,7 +43,7 @@ void setup(){             //setup subprocedure
   counts = 0;
   cpm = 0;
   multiplier = MAX_PERIOD / LOG_PERIOD;      //calculating multiplier, depend on your log period
-  Serial.begin(9600);
+  Serial.begin(115200);
   attachInterrupt(0, tube_impulse, FALLING); //define external interrupts 
   
 }

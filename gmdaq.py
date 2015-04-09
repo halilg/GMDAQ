@@ -18,7 +18,7 @@ class GMSER():
     def __init__(self, logger):
         self.__logger = logger
             
-    def connect(self, port='/dev/ttyUSB0', baud=9600):
+    def connect(self, port='/dev/ttyUSB0', baud=115200):
         try:
             self.__ser = serial.Serial(port, baud)
         except OSError:
@@ -30,7 +30,6 @@ class GMSER():
             self.__logger.info('Serial port opened')
         else:
             self.__logger.info('Serial port open timeout')
-        
     def register_cb(self, fncref):
         self.__callback=fncref
         
@@ -56,7 +55,7 @@ class GMDAQ():
     __datafnpostfix='.txt'
     __maxuuids=4
     __uuds=[]
-    __counts_per_file=10000
+    __counts_per_file=1200
     __counts=0
     __f=None
     __logfile = None
@@ -65,19 +64,30 @@ class GMDAQ():
     def __init__(self, logger):
         self.__logger = logger
         self.__DAQ=GMSER(self.__logger)
-        self.__DAQ.connect()
+        
+        # Create the data directory is it doesn't exist
+        if not (os.path.exists(self.__datadir) and os.path.isdir(self.__datadir) ):
+            try: os.mkdir (self.__datadir)
+            except:
+                self.__logger.error( ("Failed to create directory: %s") % self.__datadir)
+                return
+        
+        # to list serial ports on a Mac: python -m serial.tools.list_ports
+        self.__DAQ.connect("/dev/cu.usbmodem801211")
         self.portOpen = self.__DAQ.portOpen
-        if not self.portOpen: return
+        if not self.portOpen:
+            return
         self.__DAQ.register_cb(self.__record_data)
         self.__uuds=getuuids(self.__maxuuids)
         
     def __record_data(self, data):
         self.__counts += 1
-        if self.__counts % self.__counts_per_file == 0: self.__of = self.__getNewDataFile()
+        if self.__counts % self.__counts_per_file == 0:
+            self.__of = self.__getNewDataFile()
+            self.__logger.info( ("%d hits, writing to new data file: %s") % (self.__counts, self.__ofname) )
         self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
         self.__of.write(str(time.time())+'\n')
         #print data,
-        sys.stdout.flush()
 
     def __getNewDataFile(self):
         self.__ofname=self.__datafnprefix+self.__uuds.pop()+self.__datafnpostfix
@@ -90,7 +100,7 @@ class GMDAQ():
     def start(self):
         self.__of=self.__getNewDataFile()
         self.__logger.info("Starting data taking")
-        self.__logger.info("Writing data to: "+self.__ofname)
+        self.__logger.info( ("Writing data to: %s") % self.__ofname)
         print 'Taking data to:',self.__ofname
         self.__DAQ.run_forever()
         
@@ -105,11 +115,11 @@ if __name__ == '__main__':
                                                backupCount=100,
                                                )
     #fh = logging.FileHandler()
-    rfh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(levelname)s:%(asctime)s %(message)s')
+    formatter = logging.Formatter('%(asctime)s : %(levelname)s - %(message)s')
     rfh.setFormatter(formatter)
     logger.addHandler(rfh)
-
+    logger.setLevel(logging.INFO)
+    logger.info("gmdaq starting")
     mydaq=GMDAQ(logger)
     if not mydaq.portOpen:
         logger.error("Couldn't open serial port. Exiting.")
@@ -118,7 +128,7 @@ if __name__ == '__main__':
         mydaq.start()
     except KeyboardInterrupt:
         pass
-    fh.close()
+    rfh.close()
     
 
 
