@@ -2,14 +2,12 @@
 
 import os,sys,stat, time
 
-pipe_name = 'ipc.io'
-
 class mkfifo:
     def __init__(self):
         pass
 
     def makeNPipe(self, pname):
-        create = not (os.path.exists(pipe_name) and stat.S_ISFIFO(os.stat(pipe_name).st_mode))
+        create = not (os.path.exists(pname) and stat.S_ISFIFO(os.stat(pname).st_mode))
         if create:
             try:
                 os.mkfifo(pname)
@@ -18,31 +16,37 @@ class mkfifo:
                 return e
         
 class transmitter(mkfifo):
-    __out = None
-    def __init__(self):
-        self.makeNPipe(pipe_name)
+    __pipeout = None
+    __pipe_name = None
+    
+    def __init__(self, pn):
+        self.__pipe_name = pn
+        self.makeNPipe(self.__pipe_name)
         print "Waiting for connection..",
         sys.stdout.flush()
-        self.__out = os.open(pipe_name, os.O_WRONLY)
+        self.__pipeout = os.open(self.__pipe_name, os.O_WRONLY)
         print "Connected"
     
     def send(self):
         try:
             while True:
                 msg=raw_input('Message: ')
-                os.write(self.__out, msg+'\n')
+                os.write(self.__pipeout, msg+'\n')
         except KeyboardInterrupt:
-            os.close(self.__out)
+            os.close(self.__pipeout)
             sys.exit()
             
 
 class receiver(mkfifo):
     __pipein = None
-    def __init__(self):
-        self.makeNPipe(pipe_name)
+    __pipe_name = None
+
+    def __init__(self, pn):
+        self.__pipe_name = pn
+        self.makeNPipe(self.__pipe_name)
         print "Waiting for connection..",
         sys.stdout.flush()
-        self.__pipein = open(pipe_name, 'r')
+        self.__pipein = open(self.__pipe_name, 'r')
         print "Connected"
     
     def listen(self):
@@ -59,12 +63,13 @@ class receiver(mkfifo):
 
     
 if __name__ == '__main__':
+    pipe_name = 'ipc.io'
     while True:
         a=raw_input('Transmitter (t) or receiver (r): ')
         if a == 't':
-            t=transmitter()
+            t=transmitter(pipe_name)
             t.send()
         elif a == 'r':
-            t=receiver()
+            t=receiver(pipe_name)
             t.listen()
             
