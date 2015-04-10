@@ -53,8 +53,8 @@ class GMDAQ():
     __datadir='data'
     __datafnprefix='data_'
     __datafnpostfix='.txt'
-    __maxuuids=4
-    __uuds=[]
+    #__maxuuids=1000
+    #__uuds=[]
     __counts_per_file=1200
     __counts=0
     __f=None
@@ -78,7 +78,7 @@ class GMDAQ():
         if not self.portOpen:
             return
         self.__DAQ.register_cb(self.__record_data)
-        self.__uuds=getuuids(self.__maxuuids)
+        #self.__uuds=getuuids(self.__maxuuids)
         
     def __record_data(self, data):
         self.__counts += 1
@@ -90,7 +90,7 @@ class GMDAQ():
         #print data,
 
     def __getNewDataFile(self):
-        self.__ofname=self.__datafnprefix+self.__uuds.pop()+self.__datafnpostfix
+        self.__ofname=self.__datafnprefix+str(uuid.uuid4())+self.__datafnpostfix
         self.__ofname=os.path.join(self.__datadir,self.__ofname)
         return file(self.__ofname,'w')
 

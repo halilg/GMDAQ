@@ -47,3 +47,4 @@ data
 *_old*
 *.svg
 data
+*.log*

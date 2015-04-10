@@ -19,8 +19,8 @@ except:
 data={}
 
 for datum_raw in data_raw:
-    moment=float(datum_raw.split()[-1])
-    a=datetime.datetime.fromtimestamp(moment)
+    epoch=float(datum_raw.split()[-1])
+    a=datetime.datetime.fromtimestamp(epoch)
     #print a.minute
     if not data.has_key(a.year): data[a.year]={}
     if not data[a.year].has_key(a.month): data[a.year][a.month]={}
