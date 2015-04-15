@@ -55,7 +55,7 @@ class GMDAQ():
     __datafnpostfix='.txt'
     #__maxuuids=1000
     #__uuds=[]
-    __counts_per_file=1200
+    __counts_per_file=12000
     __counts=0
     __f=None
     __logfile = None
