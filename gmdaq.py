@@ -111,7 +111,7 @@ if __name__ == '__main__':
     #    level=logging.DEBUG)
     logger = logging.getLogger('gmdaq')
     rfh = logging.handlers.RotatingFileHandler('GMDAQ.log',
-                                               maxBytes=1000,
+                                               maxBytes=10000,
                                                backupCount=100,
                                                )
     #fh = logging.FileHandler()

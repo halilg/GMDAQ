@@ -45,6 +45,7 @@ data
 *.pdf
 *.png
 *_old*
-*.svg
+*.svn
+*.html
 data
 *.log*

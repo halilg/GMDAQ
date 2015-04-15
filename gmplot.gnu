@@ -1,4 +1,4 @@
-set terminal svg size 1400,400 enhanced font 'Verdana,10'
+set terminal canvas size 1400,400 enhanced font 'Verdana,10'
 
 set title "GM Hits"
 set xlabel "Time"
