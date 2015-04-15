@@ -47,5 +47,5 @@ data
 *_old*
 *.svn
 *.html
-data
+data*
 *.log*
