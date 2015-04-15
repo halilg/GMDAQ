@@ -72,8 +72,8 @@ class GMDAQ():
                 self.__logger.error( ("Failed to create directory: %s") % self.__datadir)
                 return
         
-        # to list serial ports on a Mac: python -m serial.tools.list_ports
-        self.__DAQ.connect("/dev/cu.usbmodem801211")
+        # to list serial ports: python -m serial.tools.list_ports
+        self.__DAQ.connect("/dev/cu.usbmodem1411") # "/dev/cu.usbmodem801211")
         self.portOpen = self.__DAQ.portOpen
         if not self.portOpen:
             return
