@@ -2,17 +2,8 @@
 import serial,os,sys,datetime,time,uuid
 import logging, logging.handlers
 
-
-def getuuids(maxuuids):
-    uuds=[]
-    for i in range(maxuuids):
-        uuds.append(str(uuid.uuid4()))
-    return uuds
-
-def logevent(lf, message):
-    timestamp=datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
-    lf.write(timestamp+message+'\n')
-
+serialports=["/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
+runstart=0.0
 class GMSER():
     portOpen=False
     def __init__(self, logger):
@@ -22,13 +13,13 @@ class GMSER():
         try:
             self.__ser = serial.Serial(port, baud)
         except OSError:
-            self.__logger.error("Serial port couldn't be opened")
+            self.__logger.error("Serial port couldn't be opened: %s" % (port))
             portOpen=False
             return
         self.portOpen=self.__ser.isOpen()
         if self.portOpen:
-            self.__logger.info('Serial port opened')
-        else:
+            self.__logger.info('Serial port opened: %s' %(port))
+        else: 
             self.__logger.info('Serial port open timeout')
     def register_cb(self, fncref):
         self.__callback=fncref
@@ -45,8 +36,7 @@ class GMSER():
                 return
             if len(data) > 0:
                 self.__callback(data)
-                data=""
-        
+                data=""        
 
 class GMDAQ():
     __ofname=''    
@@ -73,14 +63,17 @@ class GMDAQ():
                 return
         
         # to list serial ports: python -m serial.tools.list_ports
-        self.__DAQ.connect("/dev/cu.usbmodem1411") # "/dev/cu.usbmodem801211")
-        self.portOpen = self.__DAQ.portOpen
+        for port in serialports:
+            self.__DAQ.connect(port) # "/dev/cu.usbmodem801211")
+            self.portOpen = self.__DAQ.portOpen
+            if self.portOpen: break
         if not self.portOpen:
             return
         self.__DAQ.register_cb(self.__record_data)
         #self.__uuds=getuuids(self.__maxuuids)
         
     def __record_data(self, data):
+        print data
         self.__counts += 1
         if self.__counts % self.__counts_per_file == 0:
             self.__of = self.__getNewDataFile()
@@ -101,7 +94,6 @@ class GMDAQ():
         self.__of=self.__getNewDataFile()
         self.__logger.info("Starting data taking")
         self.__logger.info( ("Writing data to: %s") % self.__ofname)
-        print 'Taking data to:',self.__ofname
         self.__DAQ.run_forever()
         
 
@@ -122,7 +114,7 @@ if __name__ == '__main__':
     logger.info("gmdaq starting")
     mydaq=GMDAQ(logger)
     if not mydaq.portOpen:
-        logger.error("Couldn't open serial port. Exiting.")
+        self.__logger.error("To list available serial ports: python -m serial.tools.list_ports")
         sys.exit()
     try:
         mydaq.start()

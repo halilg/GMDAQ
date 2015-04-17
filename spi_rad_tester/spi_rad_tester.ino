@@ -1,7 +1,7 @@
 // Requires the Timer One and 1 Wire libraries 
 
 #include <OneWire.h>
-#include <TimerOne.h>
+//#include <TimerOne.h>
 
 // This example uses the timer interrupt to blink an LED
 // and also demonstrates how to share a variable between
@@ -54,8 +54,8 @@ boolean getTemperature(){
 void setup(void)
 {
   pinMode(led, OUTPUT);
-  Timer1.initialize(1000000);
-  Timer1.attachInterrupt(gmfhit); // blinkLED to run every 0.15 seconds  
+//  Timer1.initialize(1000000);
+//  Timer1.attachInterrupt(gmfhit); // blinkLED to run every 0.15 seconds  
   Serial.begin(115200);
 }
 
