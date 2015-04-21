@@ -2,7 +2,7 @@
 import serial,os,sys,datetime,time,uuid
 import logging, logging.handlers
 
-serialports=["/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
+serialports=["/dev/cu.usbmodem1471","/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
 runstart=0.0
 class GMSER():
     portOpen=False
@@ -73,14 +73,13 @@ class GMDAQ():
         #self.__uuds=getuuids(self.__maxuuids)
         
     def __record_data(self, data):
-        print data
         self.__counts += 1
         if self.__counts % self.__counts_per_file == 0:
             self.__of = self.__getNewDataFile()
             self.__logger.info( ("%d hits, writing to new data file: %s") % (self.__counts, self.__ofname) )
         self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
-        self.__of.write(str(time.time())+'\n')
-        #print data,
+        self.__of.write(str(time.time())+' ')
+        self.__of.write(data)
 
     def __getNewDataFile(self):
         self.__ofname=self.__datafnprefix+str(uuid.uuid4())+self.__datafnpostfix
@@ -114,7 +113,7 @@ if __name__ == '__main__':
     logger.info("gmdaq starting")
     mydaq=GMDAQ(logger)
     if not mydaq.portOpen:
-        self.__logger.error("To list available serial ports: python -m serial.tools.list_ports")
+        logger.error("To list available serial ports: python -m serial.tools.list_ports")
         sys.exit()
     try:
         mydaq.start()
