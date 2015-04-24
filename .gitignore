@@ -33,7 +33,7 @@
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+thumbs.db
 Thumbs.db
 
 # data location
@@ -50,3 +50,4 @@ data
 data*
 *.log*
 gmdaq.pkl
+
