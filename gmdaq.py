@@ -4,6 +4,36 @@ import logging, logging.handlers
 
 serialports=["/dev/cu.usbmodem1471","/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
 runstart=0.0
+
+import cPickle
+class trivialDB():
+    def __init__(self, dbname):
+        self.__db=None
+        self.__dbname=dbname
+        self.__data={}
+    
+    def get(self, key):
+        self.read()
+        return self.__data[key]
+
+    def put(self, key, value):
+        self.__data[key] = value
+
+    def read(self):
+        try:
+            self.__db = open(self.__dbname, 'rb')
+            self.__data = cPickle.load(self.__db)
+            self.__db.close()
+        except IOError:
+            self.write()
+
+    def write(self):
+        self.__db = open(self.__dbname, 'wb')
+        cPickle.dump(self.__data, self.__db)
+        self.__db.close()
+    
+    
+
 class GMSER():
     portOpen=False
     def __init__(self, logger):
@@ -49,26 +79,28 @@ class GMDAQ():
     __counts=0
     __f=None
     __logfile = None
+    __ofnum=0
     portOpen = False
     
-    def __init__(self, logger):
+    def __init__(self, runNumber, logger):
         self.__logger = logger
+        self.__runNumber = runNumber
         self.__DAQ=GMSER(self.__logger)
         
-        # Create the data directory is it doesn't exist
+        for port in serialports:
+            self.__DAQ.connect(port)
+            self.portOpen = self.__DAQ.portOpen
+            if self.portOpen: break
+        if not self.portOpen:
+            return
+        
+        # Create the data directory if it doesn't exist
         if not (os.path.exists(self.__datadir) and os.path.isdir(self.__datadir) ):
             try: os.mkdir (self.__datadir)
             except:
                 self.__logger.error( ("Failed to create directory: %s") % self.__datadir)
                 return
-        
-        # to list serial ports: python -m serial.tools.list_ports
-        for port in serialports:
-            self.__DAQ.connect(port) # "/dev/cu.usbmodem801211")
-            self.portOpen = self.__DAQ.portOpen
-            if self.portOpen: break
-        if not self.portOpen:
-            return
+
         self.__DAQ.register_cb(self.__record_data)
         #self.__uuds=getuuids(self.__maxuuids)
         
@@ -82,7 +114,8 @@ class GMDAQ():
         self.__of.write(data)
 
     def __getNewDataFile(self):
-        self.__ofname=self.__datafnprefix+str(uuid.uuid4())+self.__datafnpostfix
+        self.__ofnum += 1
+        self.__ofname=self.__datafnprefix+str("%05d" % self.__runNumber)+("_%02d" % self.__ofnum)+self.__datafnpostfix
         self.__ofname=os.path.join(self.__datadir,self.__ofname)
         return file(self.__ofname,'w')
 
@@ -100,6 +133,16 @@ if __name__ == '__main__':
     #logging.basicConfig(
     #    format='%(levelname)s:%(asctime)s %(message)s',
     #    level=logging.DEBUG)
+    persistentdata=trivialDB("gmdaq.pkl")
+    runNumber=0
+    try: runNumber = persistentdata.get("runNumber")
+    except KeyError:
+        pass
+    
+    runNumber += 1
+    persistentdata.put("runNumber",runNumber)
+    persistentdata.write()
+
     logger = logging.getLogger('gmdaq')
     rfh = logging.handlers.RotatingFileHandler('GMDAQ.log',
                                                maxBytes=10000,
@@ -110,8 +153,8 @@ if __name__ == '__main__':
     rfh.setFormatter(formatter)
     logger.addHandler(rfh)
     logger.setLevel(logging.INFO)
-    logger.info("gmdaq starting")
-    mydaq=GMDAQ(logger)
+    logger.info("gmdaq starting. Run #%05d" % runNumber)
+    mydaq=GMDAQ(runNumber, logger)
     if not mydaq.portOpen:
         logger.error("To list available serial ports: python -m serial.tools.list_ports")
         sys.exit()

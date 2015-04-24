@@ -49,3 +49,4 @@ data
 *.html
 data*
 *.log*
+gmdaq.pkl
