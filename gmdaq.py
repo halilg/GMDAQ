@@ -110,7 +110,9 @@ class GMDAQ():
             self.__of = self.__getNewDataFile()
             self.__logger.info( ("%d hits, writing to new data file: %s") % (self.__counts, self.__ofname) )
         self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
-        self.__of.write(str(time.time())+' ')
+        secs=time.time()*1000
+        print secs,"%12d   " % secs
+        self.__of.write("%12d   " % secs )
         self.__of.write(data)
 
     def __getNewDataFile(self):
@@ -145,7 +147,7 @@ if __name__ == '__main__':
 
     logger = logging.getLogger('gmdaq')
     rfh = logging.handlers.RotatingFileHandler('GMDAQ.log',
-                                               maxBytes=10000,
+                                               maxBytes=100000,
                                                backupCount=100,
                                                )
     #fh = logging.FileHandler()
