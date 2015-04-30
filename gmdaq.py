@@ -111,7 +111,6 @@ class GMDAQ():
             self.__logger.info( ("%d hits, writing to new data file: %s") % (self.__counts, self.__ofname) )
         self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
         secs=time.time()*1000
-        print secs,"%12d   " % secs
         self.__of.write("%12d   " % secs )
         self.__of.write(data)
 
