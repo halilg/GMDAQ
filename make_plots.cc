@@ -15,15 +15,14 @@
 using namespace std;
 
 
-const std::string currentDateTime() {
-    time_t     now = time(0);
+const std::string currentDateTime(time_t now ) {
+    //time_t     now = time(0);
     struct tm  tstruct;
     char       buf[80];
     tstruct = *localtime(&now);
     // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
     // for more information about date/time format
-    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
-
+    strftime(buf, sizeof(buf), "%Y/%m/%d - %X", &tstruct);
     return buf;
 }
 
@@ -38,13 +37,13 @@ int main(int argc, char **argv){
     //}
     //Long64_t nevents = std::atoll(argv[1]);
     //    TH1D h_b1b2Mass("h_b1b2Mass","b1b2Mass; (GeV); Events", 50, 100, 250);
-    TH1I h_hitspm1h("h_hitspm1h","Hits perMinute in the Last Hour; Minutes; Hits", 60, -59, 0);
+    TH1I h_hitspm1h("h_hitspm1h","GM hits per minute in the last hour; Minutes; Hits", 60, -59, 0);
     //    TH1I h_nVertices("h_nVertices","nVertices; Vertices; Events", 50, 0, 50);
     vector<int> mins;
     unsigned int cnthits = 0;
     
     unsigned long milliseconds_since_epoch;
-    unsigned long firstmilli=0,lastmilli;
+    unsigned long firstmilli=0;
     string rfile, line;
     rfile="gm_data/data_00001_28.txt";
     cout << "Opening text file: " << rfile << endl;
@@ -64,8 +63,11 @@ int main(int argc, char **argv){
           //cout << min << endl;
           mins.push_back(min);
     }
-    lastmilli = milliseconds_since_epoch;
+    cout << "Histogramming\n";
+    unsigned long lastsec = milliseconds_since_epoch / 1000;
     myfile.close();
+    time_t t = static_cast<time_t>(lastsec);
+    
     int lastmin = min, bmin;
     for (int i=mins.size()-1; i>-1; i--){
         bmin=mins.at(i)-lastmin;
@@ -76,8 +78,8 @@ int main(int argc, char **argv){
 
     TCanvas c;
     h_hitspm1h.Draw("E");
-    TPaveText pt(.5,.5,.95,.8,"brNDC");
-    pt.AddText(currentDateTime().c_str());    
+    TPaveText pt(.65,.85,.89,.89,"brNDC");
+    pt.AddText(currentDateTime(t).c_str());    
     pt.Draw();
     c.Print("last_hour.png");
     cout << cnthits << " hits analyzed\n";

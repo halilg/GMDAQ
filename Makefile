@@ -5,7 +5,7 @@ endif
 CPP=g++
 CPPFLAGS=-I. `root-config --cflags`
 LROOT=`root-config --cflags --glibs`
-LOTHER= #-lboost_system
+LOTHER=-Qunused-arguments
 
 make_plots.exe: make_plots.o Makefile
 	$(CPP) make_plots.o $(LROOT) $(LOTHER) -o $@
