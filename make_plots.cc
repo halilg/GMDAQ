@@ -30,6 +30,13 @@ const std::string currentDateTime(time_t now ) {
 
 int main(int argc, char **argv){
     gStyle->SetOptStat(0);
+    gStyle->SetPadTickY(1);
+    Int_t font = 8;
+    //gStyle->SetLabelFont(10*font+2);
+    gStyle->SetTextFont(10*font+2);
+    //gStyle->SetLegendFont(10*font+2);
+    //gStyle->SetStatFont(10*font+2);
+    //gStyle->SetTitleFont(10*font+2);
     //if (argc < 6){
     //    // Tell the user how to run the program
     //    std::cerr << "Usage: " << argv[0] << " <txt file> <oroot file> <TDirectory> <TTree>" << std::endl;
@@ -38,7 +45,9 @@ int main(int argc, char **argv){
     //Long64_t nevents = std::atoll(argv[1]);
     //    TH1D h_b1b2Mass("h_b1b2Mass","b1b2Mass; (GeV); Events", 50, 100, 250);
     TH1I h_hitspm1h("h_hitspm1h","GM hits per minute in the last hour; Minutes; Hits", 60, -59, 0);
-    //    TH1I h_nVertices("h_nVertices","nVertices; Vertices; Events", 50, 0, 50);
+    //    TH1I h_nVertices("h_nVertices","nVertices; Vertices; Events", 50, 0, 50);,
+    //h_hitspm1h.SetLabelFont(10*font+2);
+    //h_hitspm1h.SetTitleFont(10*font+2);
     vector<int> mins;
     unsigned int cnthits = 0;
     
@@ -78,7 +87,7 @@ int main(int argc, char **argv){
 
     TCanvas c;
     h_hitspm1h.Draw("E");
-    TPaveText pt(.65,.85,.89,.89,"brNDC");
+    TPaveText pt(.65,.85,.89,.89,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());    
     pt.Draw();
     c.Print("last_hour.png");
