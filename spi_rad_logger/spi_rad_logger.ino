@@ -13,8 +13,18 @@ void tube_impulse(){       //subprocedure for capturing events from Geiger Kit
 }
 
 void setup(){             //setup subprocedure
-  Serial.begin(115200);
-  attachInterrupt(0, tube_impulse, FALLING); //define external interrupts   
+    Serial.begin(115200);
+    
+      // wait until some data comes down the line
+      while (1){
+          if (Serial.available() > 0) {
+                // Let me introduce myself
+                Serial.println("!IAM AUNO");
+                break;
+           }
+        }  
+  
+    attachInterrupt(0, tube_impulse, FALLING); //define external interrupts   
 }
 
 void loop(){                                 //main cycle

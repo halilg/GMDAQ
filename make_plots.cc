@@ -57,7 +57,7 @@ int main(int argc, char **argv){
     rfile="gm_data/data_00001_28.txt";
     cout << "Opening text file: " << rfile << endl;
     ifstream myfile (rfile);
-    if (!myfile.is_open()) return 1;
+    if (!myfile.is_open()) return 1; 
     getline (myfile,line);
     milliseconds_since_epoch = stoi(line.substr(18,10));
     milliseconds_since_epoch *= 1000;
