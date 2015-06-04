@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import serial,os,sys,datetime,time,uuid
 import logging, logging.handlers
+from serial_ports import serial_ports
 
-serialports=["/dev/cu.usbmodem1471","/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
+serialports=serial_ports() #["/dev/cu.usbmodem1471","/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
 runstart=0.0
 
 import cPickle
@@ -88,6 +89,7 @@ class GMDAQ():
         self.__DAQ=GMSER(self.__logger)
         
         for port in serialports:
+            if "Bluetooth" in port: continue 
             self.__DAQ.connect(port)
             self.portOpen = self.__DAQ.portOpen
             if self.portOpen: break

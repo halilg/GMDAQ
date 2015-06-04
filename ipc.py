@@ -18,36 +18,48 @@ class mkfifo:
 class transmitter(mkfifo):
     __pipeout = None
     __pipe_name = None
+    __logger=None
     
-    def __init__(self, pn):
+    def __init__(self, logger, pn="fifo.io"):
+        self.__logger = logger
         self.__pipe_name = pn
         self.makeNPipe(self.__pipe_name)
-        print "Waiting for connection..",
-        sys.stdout.flush()
+        self.__logger.debug('Waiting for named pipe connection: "%s"' % self.__pipe_name)
         self.__pipeout = os.open(self.__pipe_name, os.O_WRONLY)
-        print "Connected"
+        self.__logger.info('Connection established to name pipe: "%s"' % self.__pipe_name )
     
-    def send(self):
+    def __del__(self):
+        self.close()
+        
+    def close(self):
+        os.close(self.__pipeout)
+        os.remove(self.__pipe_name)
+        self.__logger.debug("Pipe closed: %s" % self.__pipe_name)
+    
+    def send(self, msg=""):
         try:
-            while True:
-                msg=raw_input('Message: ')
+            if not msg:
+                while True:
+                    msg = raw_input('Message: ')
+                    os.write(self.__pipeout, msg+'\n')
+            else:
                 os.write(self.__pipeout, msg+'\n')
         except KeyboardInterrupt:
-            os.close(self.__pipeout)
             sys.exit()
             
 
 class receiver(mkfifo):
     __pipein = None
     __pipe_name = None
-
-    def __init__(self, pn):
+    __logger=None
+    
+    def __init__(self, logger, pn="fifo.io"):
+        self.__logger = logger
         self.__pipe_name = pn
         self.makeNPipe(self.__pipe_name)
-        print "Waiting for connection..",
-        sys.stdout.flush()
+        self.__logger.debug("Waiting for connection..")
         self.__pipein = open(self.__pipe_name, 'r')
-        print "Connected"
+        self.__logger.info("Connected")
     
     def listen(self):
         while True:

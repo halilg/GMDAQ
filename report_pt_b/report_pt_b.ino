@@ -20,14 +20,8 @@ Adafruit_BMP085 bmp;
 void setup() {
     Serial.begin(115200);
 
-    // wait until some data comes down the line
-    while (1){
-        if (Serial.available() > 0) {
-              // Let me introduce myself
-              Serial.println("!IAM ADUE");
-              break;
-         }
-      }
+    // Let me introduce myself
+    Serial.println("!IAM ADUE");
   
   /* Initialise the sensor */
   if (!bmp.begin()) {
@@ -102,6 +96,6 @@ void loop() {
     Serial.print(" muT ");
     Serial.println(b_muT);
                        
-    //delay(1800000);
-    delay(18000);
+    delay(1800000);
+    //delay(18000);
 }

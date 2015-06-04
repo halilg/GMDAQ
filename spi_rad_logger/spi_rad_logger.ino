@@ -14,15 +14,12 @@ void tube_impulse(){       //subprocedure for capturing events from Geiger Kit
 
 void setup(){             //setup subprocedure
     Serial.begin(115200);
+
+    // When the PC opens the serial port, arduino resets. 
+    // Therefore this will be the first message the PC gets once it opens the port.
+    // Let me introduce myself:
     
-      // wait until some data comes down the line
-      while (1){
-          if (Serial.available() > 0) {
-                // Let me introduce myself
-                Serial.println("!IAM AUNO");
-                break;
-           }
-        }  
+    Serial.println("!IAM AUNO");
   
     attachInterrupt(0, tube_impulse, FALLING); //define external interrupts   
 }
