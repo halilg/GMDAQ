@@ -48,7 +48,8 @@ data
 *_old*
 *.svn
 *.html
-data*
+data_*
+*_data
 *.log*
 gmdaq.pkl
 
