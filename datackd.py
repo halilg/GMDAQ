@@ -1,13 +1,41 @@
 #!/usr/bin/env python
+# Data acquisition daemon
+# Receives data from serial ports, time stamps and streams to named pipes.
+
 import serial,os,sys,datetime,time,uuid
 import logging, logging.handlers
-from ipc import *
 from serial_ports import serial_ports
 import threading
 
+
+import cPickle
+class trivialDB():
+    def __init__(self, dbname):
+        self.__db=None
+        self.__dbname=dbname
+        self.__data={}
+    
+    def get(self, key):
+        self.read()
+        return self.__data[key]
+
+    def put(self, key, value):
+        self.__data[key] = value
+
+    def read(self):
+        try:
+            self.__db = open(self.__dbname, 'rb')
+            self.__data = cPickle.load(self.__db)
+            self.__db.close()
+        except IOError:
+            self.write()
+
+    def write(self):
+        self.__db = open(self.__dbname, 'wb')
+        cPickle.dump(self.__data, self.__db)
+        self.__db.close()
+
 SBAUD=115200
-NPGM="gm.io"
-NPENV="env.io"
 
 # Serial communication class with protocol support
 class GMSERP(threading.Thread):
@@ -17,6 +45,7 @@ class GMSERP(threading.Thread):
         self.__transmitter = None
         self.isGM = False
         self.isEnv = False
+        self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
         threading.Thread.__init__(self)
             
     def connect(self, port='/dev/ttyUSB0', baud=SBAUD):
@@ -110,6 +139,18 @@ if __name__ == '__main__':
     serials = [GMSERP(logger), GMSERP(logger)]
     connGM = None # Serial connection with GM readout 
     connEnv = None # Serial connection with environment sensors readout
+    
+    persistentdata=trivialDB("datalogd.dat")
+    pidfname=os.path.join('/Users/halil/work/GMDAQ','datackd.pid')
+    runNumber=0
+    try: runNumber = persistentdata.get("runNumber")
+    except KeyError:
+        pass
+    
+    runNumber += 1
+    persistentdata.put("runNumber",runNumber)
+    persistentdata.write()    
+    
     serialports=serial_ports()
     
     logger.debug("Available serial ports: %s" % serialports)
@@ -122,6 +163,7 @@ if __name__ == '__main__':
             if serials[i].isEnv : connEnv = serials[i]
             i=i+1
             
+
     if connGM:
         logger.info("Connected to GM module")
  #       connGM.register_cb(receive_data_GM)
