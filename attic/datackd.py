@@ -5,10 +5,19 @@
 import serial,os,sys,datetime,time,uuid
 import logging, logging.handlers
 from serial_ports import serial_ports
-import threading
+from multiprocessing import Process, Pipe
 
 
 import cPickle
+
+class transmitter():
+    def __init__(self, logger=None, data=None):
+        pass
+    
+    def send (self, data):
+        print data
+
+
 class trivialDB():
     def __init__(self, dbname):
         self.__db=None
@@ -38,15 +47,15 @@ class trivialDB():
 SBAUD=115200
 
 # Serial communication class with protocol support
-class GMSERP(threading.Thread):
+class GMSERP(Process):
     portOpen=False
     def __init__(self, logger):
         self.__logger = logger
-        self.__transmitter = None
+        self.__transmitter = transmitter()
         self.isGM = False
         self.isEnv = False
         self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
-        threading.Thread.__init__(self)
+        #threading.Thread.__init__(self)
             
     def connect(self, port='/dev/ttyUSB0', baud=SBAUD):
         try:
@@ -78,11 +87,11 @@ class GMSERP(threading.Thread):
         if data == "!IAM AUNO": #can't we do this with a dictionary instead?
             self.isGM = True
             self.__desc = "GM module"
-            self.__transmitter = transmitter(self.__logger,NPGM)
+            self.__transmitter = transmitter()
         elif data == "!IAM ADUE":
             self.isEnv = True
             self.__desc = "Environment sensors"
-            self.__transmitter = transmitter(self.__logger,NPENV)
+            self.__transmitter = transmitter()
         
     #def register_cb(self, fncref):
     #    self.__callback=fncref
@@ -126,7 +135,7 @@ if __name__ == '__main__':
                                                maxBytes=100000,
                                                backupCount=100,)
     
-    isDaemon = False
+    #isDaemon = False
     if len(sys.argv) > 1:
         if sys.argv[1] == "-d": isDaemon = True
     
@@ -136,7 +145,7 @@ if __name__ == '__main__':
     #logger.setLevel(logging.INFO)
     logger.setLevel(logging.DEBUG)
     logger.info("datalogd starting.")
-    serials = [GMSERP(logger), GMSERP(logger)]
+    #serials = [GMSERP(logger), GMSERP(logger)]
     connGM = None # Serial connection with GM readout 
     connEnv = None # Serial connection with environment sensors readout
     
@@ -155,25 +164,25 @@ if __name__ == '__main__':
     
     logger.debug("Available serial ports: %s" % serialports)
     i=0
+    s_port_workers=[]
     for port in serialports:
         if "Bluetooth" in port: continue
-        serials[i].connect(port)
-        if serials[i].portOpen:
-            if serials[i].isGM : connGM = serials[i]
-            if serials[i].isEnv : connEnv = serials[i]
+        myport=GMSERP(logger)
+        myport.connect(port)
+        if myport.portOpen:
+            if myport.isGM : connGM = myport
+            if myport.isEnv : connEnv = myport
+            s_port_workers.append(myport)
             i=i+1
             
-
     if connGM:
         logger.info("Connected to GM module")
- #       connGM.register_cb(receive_data_GM)
-        connGM.setDaemon(True)
+        #connGM.daemon = True
         connGM.start()
         
     if connEnv:
         logger.info("Connected to environment sensors")
-#        connEnv.register_cb(receive_data_env)
-        connEnv.setDaemon(True)
+        #connEnv.daemon = True
         connEnv.start()
     
     try:
