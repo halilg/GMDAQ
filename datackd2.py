@@ -24,7 +24,7 @@ class SerialComm(threading.Thread):
         self.__ofile=open(dlogfile,"w",0) # buffer size=0
 
     def run(self):
-        self.__logger.info("Thread %1d starting: %s" % self.threadID, self.name)
+        self.__logger.info("Thread %1d starting: %s" % (self.threadID, self.name))
         self.__logger.info("Logging data to: %s" % self.__ofname)
         try:
             while True:

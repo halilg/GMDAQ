@@ -52,6 +52,6 @@ data_*
 *_data
 *.log*
 gmdaq.pkl
-*.io
+*.pid*
 *.dat
-
+*.MainThread-*
