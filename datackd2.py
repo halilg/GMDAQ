@@ -69,6 +69,15 @@ class App():
     def run(self):
         signal.signal(signal.SIGTERM, self.signal_handler)
 
+
+        # Create the data directory if it doesn't exist
+        datadirabs=os.path.join(self.workdir,self.__datadir)
+        if not (os.path.exists(datadirabs) and os.path.isdir(datadirabs) ):
+            try: os.mkdir (datadirabs)
+            except:
+                self.__logger.error( ("Failed to create data directory: %s") % datadirabs)
+                return
+        
         #determine the run number
         persistentdata=trivialDB(os.path.join(self.workdir,self.MyName+".dat"))
         runNumber=0
