@@ -153,7 +153,6 @@ if __name__ == '__main__':
     #wpath=os.getcwd() # uncomment to set the working directory to $PWD
     pidfname=os.path.join(wpath,myname+".pid")
     logfile=os.path.join(wpath,myname+".log")
-    lock=lockfile.LockFile(pidfname)
     
     if len(sys.argv) > 1:
         if sys.argv[1] == "status":
