@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import glob
 import serial
@@ -27,13 +28,13 @@ def serial_ports():
     result = []
     for port in ports:
         try:
-            s = serial.Serial(port)
-            s.close()
-            result.append(port)
+           s = serial.Serial(port)
+           s.close()
+           result.append(port)
         except (OSError, serial.SerialException):
-            pass
+           pass
     return result
 
 
 if __name__ == '__main__':
-    print(serial_ports())
+    print serial_ports()
