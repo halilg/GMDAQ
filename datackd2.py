@@ -166,7 +166,7 @@ class App():
             #http://pymotw.com/2/multiprocessing/basics.html
             if worker.is_alive():
                 self.__logger.debug("terminating: %s" % worker.name)
-                worker.terminate()
+                worker.stop()
                 worker.join()  
         
 

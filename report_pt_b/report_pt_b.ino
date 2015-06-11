@@ -1,7 +1,7 @@
 #include <Wire.h>
-#include <Adafruit_BMP085.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_HMC5883_U.h>
+#include <Adafruit_BMP085.h> // "Adafruit BMP085"
+#include <Adafruit_Sensor.h> // "Adafruit Unified Sensor"
+#include <Adafruit_HMC5883_U.h> // "Adafruit HMC5883 Unied"
 
 #define BMP085hPAOFFSET 94
 
