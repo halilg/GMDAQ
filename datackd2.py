@@ -2,7 +2,7 @@
 
 # Data acquisition daemon
 
-import serial,os,sys,datetime,time,uuid
+import serial,os,sys,datetime,time,uuid,pwd, platform#, psutil
 import logging, logging.handlers, lockfile, signal, threading
 from serial_ports import serial_ports
 from daemon import runner
@@ -48,6 +48,8 @@ class App():
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
         self.stdin_path = '/dev/null'
+        self.stdout_path = '/dev/tty' #logfile
+        self.stderr_path = '/dev/tty' #logfile
         self.stdout_path = logfile
         self.stderr_path = logfile
         self.pidfile_path =  pidfname
@@ -68,7 +70,17 @@ class App():
 
     def run(self):
         signal.signal(signal.SIGTERM, self.signal_handler)
-
+        
+        # Script needs maximum process priority to timestamp incoming data accurately
+        if os.getuid() != 0:
+            self.__logger.warning("Not started as root user")
+                                  
+        try:
+            print os.nice(-19)
+            self.__logger.debug("Self-renice successful")
+        except OSError:
+            if not "Darwin" in platform.platform(): # os.nice(-n) didn't work on Mac OS no matter what @@@
+                self.__logger.warning("Renice failed. Starting this daemon with superuser priviledges might help it work.")
 
         # Create the data directory if it doesn't exist
         datadirabs=os.path.join(self.workdir,self.__datadir)
@@ -128,6 +140,11 @@ class App():
                 self.__logger.error("Serial port couldn't be opened: %s" % (port))
                 continue
 
+        if len(self.workers) == 0:
+            self.__logger.warning("No compatible serial device found. Exiting.")
+            return
+
+            
         for t in self.workers:
             t.start()
 
@@ -158,7 +175,8 @@ if __name__ == '__main__':
     myname=os.path.basename(sys.argv[0])
     
     #set-up paths and filenames
-    wpath=os.path.dirname(os.path.realpath(__file__)) # set working directory to the path of the script
+    scriptpath=os.path.realpath(__file__)
+    wpath=os.path.dirname(scriptpath) # set working directory to the path of the script
     #wpath=os.getcwd() # uncomment to set the working directory to $PWD
     pidfname=os.path.join(wpath,myname+".pid")
     logfile=os.path.join(wpath,myname+".log")
@@ -184,8 +202,13 @@ if __name__ == '__main__':
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     rfh.setFormatter(formatter)
     
+    # http://www.gavinj.net/2012/06/building-python-daemon-process.html
+    duid=os.stat(scriptpath).st_uid
+    username=pwd.getpwuid(duid).pw_name
     app = App(pidfname)
+    logger.debug("Will run as user: %s (%d)" % (username, duid))
     daemon_runner = runner.DaemonRunner(app)
+    daemon_runner.daemon_context.uid=duid
     
     #This ensures that the logger file handle does not get closed during daemonization
     daemon_runner.daemon_context.files_preserve=[rfh.stream]
