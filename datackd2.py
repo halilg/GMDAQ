@@ -21,7 +21,7 @@ class SerialComm(threading.Thread):
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.__serial=ser
         self.__ofname=dlogfile
-        self.__ofile=open(dlogfile,"w",0) # buffer size=0
+        self.__ofile=open(dlogfile,"w",0) # buffer size=0     
 
     def run(self):
         self.__logger.info("Thread %1d starting: %s" % (self.threadID, self.name))
@@ -39,7 +39,11 @@ class SerialComm(threading.Thread):
     
     def stop(self):
         if self.__ofile: self.__ofile.close()
-        #if self.__serial.isOpen(): self.__serial.close()
+        self.__logger.debug("output file close")
+        if self.__serial.isOpen():
+            self.__serial.close()
+            self.__logger.debug("serial port closed")
+            #raise serial.SerialException
 
 class App():
     # The class that is the daemon. Steers the things
@@ -59,6 +63,7 @@ class App():
         self.__datadir="data"
         self.__datafnprefix=''
         self.__datafnpostfix='.txt'
+        self.__stopping=False
 
     def signal_handler(self, signum, frame):
         self.__logger.debug("Received signal %s" % sig_names[signum])
@@ -66,7 +71,7 @@ class App():
             self.__stopping = True
             self.stop()
             self.__logger.debug("Exiting daemon")
-            sys.exit()
+            #sys.exit()
 
     def run(self):
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -118,10 +123,10 @@ class App():
                     self.__logger.debug('Received: %s' %(data))
                     tname="?"
                     dprefix="data"
-                    if data == "!IAM AUNO":
+                    if "!IAM AUNO" in data:
                         tname="GMLogger"
                         dprefix="gm"
-                    elif data == "!IAM ADUE":
+                    elif "!IAM ADUE" in data:
                         tname="EnvLogger"
                         dprefix="env"
                         
@@ -148,26 +153,21 @@ class App():
         for t in self.workers:
             t.start()
 
-        while True:
-            time.sleep(1000)# Exiting the function means terminating the daemon 
+        while not self.__stopping:
+            time.sleep(3)# Exiting the function means terminating the daemon
+            
+        self.__logger.warning("Bye.")
             
     def stop(self):
-        self.__logger.debug("Stopping")
-        
-        for ser in self.serial_connections:
-            #http://pyserial.sourceforge.net/pyserial_api.html
-            if ser.isOpen():
-                ser.close()
-                self.__logger.debug("Connection closed: %s ", ser.name)
-            
-        
-            
+        self.__logger.debug("Stopping")            
         for worker in self.workers:
             #http://pymotw.com/2/multiprocessing/basics.html
             if worker.is_alive():
                 self.__logger.debug("terminating: %s" % worker.name)
                 worker.stop()
-                worker.join()  
+                #self.__logger.debug("deleting: %s" % worker.name)
+                #worker._Thread__delete()
+                #del worker#.join()  
         
 
 
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     duid=os.stat(scriptpath).st_uid
     username=pwd.getpwuid(duid).pw_name
     app = App(pidfname)
-    logger.debug("Will run as user: %s (%d)" % (username, duid))
+    #logger.debug("Will run as user: %s (%d)" % (username, duid))
     daemon_runner = runner.DaemonRunner(app)
     daemon_runner.daemon_context.uid=duid
     
