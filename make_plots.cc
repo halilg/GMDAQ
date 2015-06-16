@@ -22,7 +22,7 @@ const std::string currentDateTime(time_t now ) {
     tstruct = *localtime(&now);
     // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
     // for more information about date/time format
-    strftime(buf, sizeof(buf), "%Y/%m/%d - %X", &tstruct);
+    strftime(buf, sizeof(buf), "%Y/%m/%d - t_{0}=%X", &tstruct);
     return buf;
 }
 
@@ -54,24 +54,31 @@ int main(int argc, char **argv){
     unsigned long milliseconds_since_epoch;
     unsigned long firstmilli=0;
     string rfile, line;
-    rfile="gm_data/data_00001_28.txt";
+    rfile="data/gm_00018.txt";
     cout << "Opening text file: " << rfile << endl;
     ifstream myfile (rfile);
     if (!myfile.is_open()) return 1; 
     getline (myfile,line);
-    milliseconds_since_epoch = stoi(line.substr(18,10));
+    cout << line.substr(0,13) << endl;
+    milliseconds_since_epoch = stoll(line);
     milliseconds_since_epoch *= 1000;
     firstmilli = milliseconds_since_epoch;
     int min;
-    while ( getline (myfile,line) ){ // 1430 387 170 .830
-        ++cnthits;
-            //20150430T124610   1430387170.83 561899392
-          milliseconds_since_epoch = stoi(line.substr(18,10)); // !!!!!!!!!! increase length to 13 for new data
-          milliseconds_since_epoch *= 1000;
-          min = (milliseconds_since_epoch - firstmilli) / 60000; // convert to min elapsed. float-int conversion truncates.
-          //cout << min << endl;
-          mins.push_back(min);
-    }
+    try{
+        while ( getline (myfile,line) ){ // 1430 387 170 .830
+            ++cnthits;
+                //20150430T124610   1430387170.83 561899392
+              
+              if ( line.size() == 0) break;
+              if ( !std::isdigit(line.at(0)) ) break;
+              //cout << '"' << line << '"' << endl;
+              milliseconds_since_epoch = stoll(line); // !!!!!!!!!! increase length to 13 for new data
+              //milliseconds_since_epoch *= 1000;
+              min = (milliseconds_since_epoch - firstmilli) / 60000; // convert to min elapsed. float-int conversion truncates.
+              //cout << min << endl;
+              mins.push_back(min);
+        }
+    } catch (int param) { cout << "int exception"; }
     cout << "Histogramming\n";
     unsigned long lastsec = milliseconds_since_epoch / 1000;
     myfile.close();
@@ -85,7 +92,8 @@ int main(int argc, char **argv){
         h_hitspm1h.Fill(bmin);
     }
 
-    TCanvas c;
+    int scale=2;
+    TCanvas c("c", "c", scale*640,scale*480);
     h_hitspm1h.Draw("E");
     TPaveText pt(.65,.85,.89,.89,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());    

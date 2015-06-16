@@ -30,7 +30,7 @@ class trivialDB():
     
 
 if __name__ == '__main__':
-    persistentdata=trivialDB("gmdaq.pkl")
+    persistentdata=trivialDB("gmdaq.dat")
     runNumber=0
     try: runNumber = persistentdata.get("runNumber")
     except KeyError:

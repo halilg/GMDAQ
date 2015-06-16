@@ -55,7 +55,7 @@ class SerialComm(threading.Thread):
 class App():
     # The class that is the daemon. Steers the things
     def __init__(self, pidfname):
-        self.MyName="datackd"
+        self.MyName="gmdaq"
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
         self.stdin_path = '/dev/null'
@@ -107,7 +107,9 @@ class App():
                 return
         
         #determine the run number
-        persistentdata=trivialDB(os.path.join(self.workdir,self.MyName+".dat"))
+        dfilename=os.path.join(self.workdir,self.MyName+".dat")
+        self.__logger.debug("Reading run data from %s" % dfilename) 
+        persistentdata=trivialDB(dfilename)
         runNumber=0
         try: runNumber = persistentdata.get("runNumber")
         except KeyError:

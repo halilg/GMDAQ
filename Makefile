@@ -3,9 +3,9 @@ $(error *** Please set up ROOT)
 endif
 
 CPP=g++
-CPPFLAGS=-I. `root-config --cflags`
+CPPFLAGS=-I. `root-config --cflags` -std=c++11
 LROOT=`root-config --cflags --glibs`
-LOTHER=-Qunused-arguments
+#LOTHER=-Qunused-arguments #use on mac os
 
 make_plots.exe: make_plots.o Makefile
 	$(CPP) make_plots.o $(LROOT) $(LOTHER) -o $@
