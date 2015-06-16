@@ -9,6 +9,8 @@ from daemon import runner
 from trivialDB import trivialDB
 
 SBAUD=115200
+DEBUG=False
+#DEBUG=True #Keeps the run number fixed
 
 sig_names = {1: 'SIGHUP', 2: 'SIGINT', 3: 'SIGQUIT', 4: 'SIGILL', 5: 'SIGTRAP', 6: 'SIGIOT', 7: 'SIGEMT', 8: 'SIGFPE', 9: 'SIGKILL', 10: 'SIGBUS', 11: 'SIGSEGV', 12: 'SIGSYS', 13: 'SIGPIPE', 14: 'SIGALRM', 15: 'SIGTERM', 16: 'SIGURG', 17: 'SIGSTOP', 18: 'SIGTSTP', 19: 'SIGCONT', 20: 'SIGCHLD', 21: 'SIGTTIN', 22: 'SIGTTOU', 23: 'SIGIO', 24: 'SIGXCPU', 25: 'SIGXFSZ', 26: 'SIGVTALRM', 27: 'SIGPROF', 28: 'SIGWINCH', 29: 'SIGINFO', 30: 'SIGUSR1', 31: 'SIGUSR2'}
 
@@ -21,29 +23,34 @@ class SerialComm(threading.Thread):
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.__serial=ser
         self.__ofname=dlogfile
-        self.__ofile=open(dlogfile,"w",0) # buffer size=0     
+        self.__ofile=open(dlogfile,"w",0) # buffer size=0
+        self.__terminate=False
 
     def run(self):
         self.__logger.info("Thread %1d starting: %s" % (self.threadID, self.name))
         self.__logger.info("Logging data to: %s" % self.__ofname)
-        try:
-            while True:
+        #try:
+        while not self.__terminate:
+                #self.__logger.info("Thread %1d self.__terminate: %d" % (self.threadID, self.__terminate))
                 data = self.__serial.readline().strip()
                 msecs=time.time()*1000
                 data = "%12d   %s\n" % (msecs, data) # time stamp
                 self.__ofile.write(data)
-        except serial.SerialException:
-            pass
+        #except serial.SerialException:
+        #    pass
         self.stop()
-        self.__logger.info("Thread exiting: %s" % self.name)
+        self.__logger.info("Thread %1d exiting: %s" % (self.threadID, self.name))
     
     def stop(self):
+        self.__terminate=True
+        
         if self.__ofile: self.__ofile.close()
-        self.__logger.debug("output file close")
+        self.__logger.debug("output file closed (%s)" % self.name)
         if self.__serial.isOpen():
             self.__serial.close()
-            self.__logger.debug("serial port closed")
+            self.__logger.debug("serial port closed (%s)" % self.name)
             #raise serial.SerialException
+        #thread.exit()
 
 class App():
     # The class that is the daemon. Steers the things
@@ -52,8 +59,8 @@ class App():
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
         self.stdin_path = '/dev/null'
-        self.stdout_path = '/dev/tty' #logfile
-        self.stderr_path = '/dev/tty' #logfile
+        self.stdout_path = logfile #'/dev/tty' #
+        self.stderr_path = logfile #'/dev/tty' #
         self.stdout_path = logfile
         self.stderr_path = logfile
         self.pidfile_path =  pidfname
@@ -66,12 +73,16 @@ class App():
         self.__stopping=False
 
     def signal_handler(self, signum, frame):
-        self.__logger.debug("Received signal %s" % sig_names[signum])
+        self.__logger.debug("(%d) Received signal %s" % (os.getpid(), sig_names[signum]))
         if signum == 15: # SIGTERM
             self.__stopping = True
+            self.__logger.debug("Calling App().stop()")
             self.stop()
-            self.__logger.debug("Exiting daemon")
-            #sys.exit()
+            self.__logger.debug("Exiting daemon (%d)" % os.getpid() )
+            
+            #self destruct
+            os.kill(os.getpid(), signal.SIGKILL)
+            
 
     def run(self):
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -101,10 +112,13 @@ class App():
         try: runNumber = persistentdata.get("runNumber")
         except KeyError:
             pass        
-        runNumber += 1
+        if DEBUG:
+            runNumber = 0
+        else:
+            runNumber+=1
+            persistentdata.put("runNumber",runNumber)
+            persistentdata.write()    
         self.__logger.info("Starting run %05d" % runNumber)
-        persistentdata.put("runNumber",runNumber)
-        persistentdata.write()
         
         serialports=serial_ports()
         self.__logger.debug("Available serial ports: %s" % serialports)
@@ -116,6 +130,8 @@ class App():
             try:
                 self.__logger.debug("Opening serial port: %s" % port)
                 ser = serial.Serial(port, SBAUD)
+                if ser.isOpen(): ser.close() #port may be left open from a failed former run
+                ser.open()
                 if ser.isOpen():
                     self.serial_connections.append(ser)
                     self.__logger.debug('Serial port opened: %s' %(port))
@@ -156,18 +172,21 @@ class App():
         while not self.__stopping:
             time.sleep(3)# Exiting the function means terminating the daemon
             
-        self.__logger.warning("Bye.")
+        self.__logger.warning("(%d) Bye. Workers: %d" % (os.getpid(), len(self.workers)))
+        self.__logger.warning("Bye. %d" % os.getpid())
+        
+        #self destruct
+        #os.kill(os.getpid(), signal.SIGKILL)
             
     def stop(self):
+        self.__stopping=True
         self.__logger.debug("Stopping")            
         for worker in self.workers:
             #http://pymotw.com/2/multiprocessing/basics.html
             if worker.is_alive():
                 self.__logger.debug("terminating: %s" % worker.name)
                 worker.stop()
-                #self.__logger.debug("deleting: %s" % worker.name)
-                #worker._Thread__delete()
-                #del worker#.join()  
+        self.__logger.debug("App().stop() ends")
         
 
 
@@ -193,6 +212,7 @@ if __name__ == '__main__':
     #set-up logger
     logger = logging.getLogger(__name__)
     rfh = logging.handlers.RotatingFileHandler(logfile,
+                                               mode='a',
                                                maxBytes=100000,
                                                backupCount=100,
                                                )
@@ -215,6 +235,9 @@ if __name__ == '__main__':
     
     try:
         daemon_runner.do_action()
+        # if sys.argv[1] == "stop":
+        #     daemon_runner._stop()
+        #     daemon_runner._stop()
     except runner.DaemonRunnerStopFailureError:
         print myname,"is already stopped"
     except lockfile.LockTimeout:
