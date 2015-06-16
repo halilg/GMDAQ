@@ -1,171 +1,222 @@
 #!/usr/bin/env python
-import serial,os,sys,datetime,time,uuid
-import logging, logging.handlers
+
+# Data acquisition daemon
+
+import serial,os,sys,datetime,time,uuid,pwd, platform#, psutil
+import logging, logging.handlers, lockfile, signal, threading
 from serial_ports import serial_ports
+from daemon import runner
+from trivialDB import trivialDB
 
-serialports=serial_ports() #["/dev/cu.usbmodem1471","/dev/cu.usbmodem801211", "/dev/cu.usbmodem1411", "/dev/ttyUSB0"]
-runstart=0.0
+SBAUD=115200
 
-import cPickle
-class trivialDB():
-    def __init__(self, dbname):
-        self.__db=None
-        self.__dbname=dbname
-        self.__data={}
-    
-    def get(self, key):
-        self.read()
-        return self.__data[key]
+sig_names = {1: 'SIGHUP', 2: 'SIGINT', 3: 'SIGQUIT', 4: 'SIGILL', 5: 'SIGTRAP', 6: 'SIGIOT', 7: 'SIGEMT', 8: 'SIGFPE', 9: 'SIGKILL', 10: 'SIGBUS', 11: 'SIGSEGV', 12: 'SIGSYS', 13: 'SIGPIPE', 14: 'SIGALRM', 15: 'SIGTERM', 16: 'SIGURG', 17: 'SIGSTOP', 18: 'SIGTSTP', 19: 'SIGCONT', 20: 'SIGCHLD', 21: 'SIGTTIN', 22: 'SIGTTOU', 23: 'SIGIO', 24: 'SIGXCPU', 25: 'SIGXFSZ', 26: 'SIGVTALRM', 27: 'SIGPROF', 28: 'SIGWINCH', 29: 'SIGINFO', 30: 'SIGUSR1', 31: 'SIGUSR2'}
 
-    def put(self, key, value):
-        self.__data[key] = value
+#http://www.tutorialspoint.com/python/python_multithreading.htm
+class SerialComm(threading.Thread):   
+    def __init__(self, threadID, name, ser, dlogfile):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
+        self.__serial=ser
+        self.__ofname=dlogfile
+        self.__ofile=open(dlogfile,"w",0) # buffer size=0     
 
-    def read(self):
+    def run(self):
+        self.__logger.info("Thread %1d starting: %s" % (self.threadID, self.name))
+        self.__logger.info("Logging data to: %s" % self.__ofname)
         try:
-            self.__db = open(self.__dbname, 'rb')
-            self.__data = cPickle.load(self.__db)
-            self.__db.close()
-        except IOError:
-            self.write()
-
-    def write(self):
-        self.__db = open(self.__dbname, 'wb')
-        cPickle.dump(self.__data, self.__db)
-        self.__db.close()
+            while True:
+                data = self.__serial.readline().strip()
+                msecs=time.time()*1000
+                data = "%12d   %s\n" % (msecs, data) # time stamp
+                self.__ofile.write(data)
+        except serial.SerialException:
+            pass
+        self.stop()
+        self.__logger.info("Thread exiting: %s" % self.name)
     
-    
-
-class GMSER():
-    portOpen=False
-    def __init__(self, logger):
-        self.__logger = logger
-            
-    def connect(self, port='/dev/ttyUSB0', baud=115200):
-        try:
-            self.__ser = serial.Serial(port, baud)
-        except OSError:
-            self.__logger.error("Serial port couldn't be opened: %s" % (port))
-            portOpen=False
-            return
-        self.portOpen=self.__ser.isOpen()
-        if self.portOpen:
-            self.__logger.info('Serial port opened: %s' %(port))
-        else: 
-            self.__logger.info('Serial port open timeout')
-    def register_cb(self, fncref):
-        self.__callback=fncref
-        
     def stop(self):
-        self.__ser.close()
-        
-    def run_forever(self):
-        while True:
-            try:
-                data = self.__ser.readline() 
-            except KeyboardInterrupt:
-                self.__ser.close()
-                return
-            if len(data) > 0:
-                self.__callback(data)
-                data=""        
+        if self.__ofile: self.__ofile.close()
+        self.__logger.debug("output file close")
+        if self.__serial.isOpen():
+            self.__serial.close()
+            self.__logger.debug("serial port closed")
+            #raise serial.SerialException
 
-class GMDAQ():
-    __ofname=''    
-    __datadir='data'
-    __datafnprefix='data_'
-    __datafnpostfix='.txt'
-    #__maxuuids=1000
-    #__uuds=[]
-    __counts_per_file=12000
-    __counts=0
-    __f=None
-    __logfile = None
-    __ofnum=0
-    portOpen = False
-    
-    def __init__(self, runNumber, logger):
-        self.__logger = logger
-        self.__runNumber = runNumber
-        self.__DAQ=GMSER(self.__logger)
+class App():
+    # The class that is the daemon. Steers the things
+    def __init__(self, pidfname):
+        self.MyName="datackd"
+        self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
+        self.workdir=os.path.dirname(logger.handlers[0].baseFilename)
+        self.stdin_path = '/dev/null'
+        self.stdout_path = '/dev/tty' #logfile
+        self.stderr_path = '/dev/tty' #logfile
+        self.stdout_path = logfile
+        self.stderr_path = logfile
+        self.pidfile_path =  pidfname
+        self.pidfile_timeout = 5
+        self.serial_connections=[]
+        self.workers=[]        
+        self.__datadir="data"
+        self.__datafnprefix=''
+        self.__datafnpostfix='.txt'
+        self.__stopping=False
+
+    def signal_handler(self, signum, frame):
+        self.__logger.debug("Received signal %s" % sig_names[signum])
+        if signum == 15: # SIGTERM
+            self.__stopping = True
+            self.stop()
+            self.__logger.debug("Exiting daemon")
+            #sys.exit()
+
+    def run(self):
+        signal.signal(signal.SIGTERM, self.signal_handler)
         
-        for port in serialports:
-            if "Bluetooth" in port: continue 
-            self.__DAQ.connect(port)
-            self.portOpen = self.__DAQ.portOpen
-            if self.portOpen: break
-        if not self.portOpen:
-            return
-        
+        # Script needs maximum process priority to timestamp incoming data accurately
+        if os.getuid() != 0:
+            self.__logger.warning("Not started as root user")
+                                  
+        try:
+            print os.nice(-19)
+            self.__logger.debug("Self-renice successful")
+        except OSError:
+            if not "Darwin" in platform.platform(): # os.nice(-n) didn't work on Mac OS no matter what @@@
+                self.__logger.warning("Renice failed. Starting this daemon with superuser priviledges might help it work.")
+
         # Create the data directory if it doesn't exist
-        if not (os.path.exists(self.__datadir) and os.path.isdir(self.__datadir) ):
-            try: os.mkdir (self.__datadir)
+        datadirabs=os.path.join(self.workdir,self.__datadir)
+        if not (os.path.exists(datadirabs) and os.path.isdir(datadirabs) ):
+            try: os.mkdir (datadirabs)
             except:
-                self.__logger.error( ("Failed to create directory: %s") % self.__datadir)
+                self.__logger.error( ("Failed to create data directory: %s") % datadirabs)
                 return
-
-        self.__DAQ.register_cb(self.__record_data)
-        #self.__uuds=getuuids(self.__maxuuids)
         
-    def __record_data(self, data):
-        self.__counts += 1
-        if self.__counts % self.__counts_per_file == 0:
-            self.__of = self.__getNewDataFile()
-            self.__logger.info( ("%d hits, writing to new data file: %s") % (self.__counts, self.__ofname) )
-        self.__of.write(datetime.datetime.now().strftime("%Y%m%dT%H%M%S   "))
-        secs=time.time()*1000
-        self.__of.write("%12d   " % secs )
-        self.__of.write(data)
-
-    def __getNewDataFile(self):
-        self.__ofnum += 1
-        self.__ofname=self.__datafnprefix+str("%05d" % self.__runNumber)+("_%02d" % self.__ofnum)+self.__datafnpostfix
-        self.__ofname=os.path.join(self.__datadir,self.__ofname)
-        return file(self.__ofname,'w')
-
-    def setLogger(logger):
-        self.__log=logger
-
-    def start(self):
-        self.__of=self.__getNewDataFile()
-        self.__logger.info("Starting data taking")
-        self.__logger.info( ("Writing data to: %s") % self.__ofname)
-        self.__DAQ.run_forever()
+        #determine the run number
+        persistentdata=trivialDB(os.path.join(self.workdir,self.MyName+".dat"))
+        runNumber=0
+        try: runNumber = persistentdata.get("runNumber")
+        except KeyError:
+            pass        
+        runNumber += 1
+        self.__logger.info("Starting run %05d" % runNumber)
+        persistentdata.put("runNumber",runNumber)
+        persistentdata.write()
         
+        serialports=serial_ports()
+        self.__logger.debug("Available serial ports: %s" % serialports)
+
+        ser=None
+        threadID=0
+        for port in serialports:
+            if "Bluetooth" in port: continue
+            try:
+                self.__logger.debug("Opening serial port: %s" % port)
+                ser = serial.Serial(port, SBAUD)
+                if ser.isOpen():
+                    self.serial_connections.append(ser)
+                    self.__logger.debug('Serial port opened: %s' %(port))
+                    data = ser.readline().strip()
+                    self.__logger.debug('Received: %s' %(data))
+                    tname="?"
+                    dprefix="data"
+                    if "!IAM AUNO" in data:
+                        tname="GMLogger"
+                        dprefix="gm"
+                    elif "!IAM ADUE" in data:
+                        tname="EnvLogger"
+                        dprefix="env"
+                        
+
+                    ofname=self.__datafnprefix+dprefix+str("_%05d" % runNumber)+self.__datafnpostfix
+                    ofname=os.path.join(self.workdir, self.__datadir, ofname)
+                    t = SerialComm(threadID, tname,ser, ofname)
+                    threadID+=1
+                    t.daemon = False
+                    self.workers.append(t)
+                        
+                else:
+                    self.__logger.error('Serial port open timeout')
+                    
+            except OSError:
+                self.__logger.error("Serial port couldn't be opened: %s" % (port))
+                continue
+
+        if len(self.workers) == 0:
+            self.__logger.warning("No compatible serial device found. Exiting.")
+            return
+
+            
+        for t in self.workers:
+            t.start()
+
+        while not self.__stopping:
+            time.sleep(3)# Exiting the function means terminating the daemon
+            
+        self.__logger.warning("Bye.")
+            
+    def stop(self):
+        self.__logger.debug("Stopping")            
+        for worker in self.workers:
+            #http://pymotw.com/2/multiprocessing/basics.html
+            if worker.is_alive():
+                self.__logger.debug("terminating: %s" % worker.name)
+                worker.stop()
+                #self.__logger.debug("deleting: %s" % worker.name)
+                #worker._Thread__delete()
+                #del worker#.join()  
+        
+
 
 if __name__ == '__main__':
-    #logging.basicConfig(
-    #    format='%(levelname)s:%(asctime)s %(message)s',
-    #    level=logging.DEBUG)
-    persistentdata=trivialDB("gmdaq.pkl")
-    runNumber=0
-    try: runNumber = persistentdata.get("runNumber")
-    except KeyError:
-        pass
+    myname=os.path.basename(sys.argv[0])
     
-    runNumber += 1
-    persistentdata.put("runNumber",runNumber)
-    persistentdata.write()
-
-    logger = logging.getLogger('gmdaq')
-    rfh = logging.handlers.RotatingFileHandler('GMDAQ.log',
+    #set-up paths and filenames
+    scriptpath=os.path.realpath(__file__)
+    wpath=os.path.dirname(scriptpath) # set working directory to the path of the script
+    #wpath=os.getcwd() # uncomment to set the working directory to $PWD
+    pidfname=os.path.join(wpath,myname+".pid")
+    logfile=os.path.join(wpath,myname+".log")
+    
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "status":
+            if os.path.exists(pidfname) :
+                pid=open(pidfname).readline()
+                print pid,
+            else:
+                print myname,"is not running"
+            sys.exit()
+    
+    #set-up logger
+    logger = logging.getLogger(__name__)
+    rfh = logging.handlers.RotatingFileHandler(logfile,
                                                maxBytes=100000,
                                                backupCount=100,
                                                )
-    #fh = logging.FileHandler()
-    formatter = logging.Formatter('%(asctime)s : %(levelname)s - %(message)s')
-    rfh.setFormatter(formatter)
     logger.addHandler(rfh)
-    logger.setLevel(logging.INFO)
-    logger.info("gmdaq starting. Run #%05d" % runNumber)
-    mydaq=GMDAQ(runNumber, logger)
-    if not mydaq.portOpen:
-        logger.error("To list available serial ports: python -m serial.tools.list_ports")
-        sys.exit()
-    try:
-        mydaq.start()
-    except KeyboardInterrupt:
-        pass
-    rfh.close()
+    #logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    rfh.setFormatter(formatter)
     
-
-
+    # http://www.gavinj.net/2012/06/building-python-daemon-process.html
+    duid=os.stat(scriptpath).st_uid
+    username=pwd.getpwuid(duid).pw_name
+    app = App(pidfname)
+    #logger.debug("Will run as user: %s (%d)" % (username, duid))
+    daemon_runner = runner.DaemonRunner(app)
+    daemon_runner.daemon_context.uid=duid
+    
+    #This ensures that the logger file handle does not get closed during daemonization
+    daemon_runner.daemon_context.files_preserve=[rfh.stream]
+    
+    try:
+        daemon_runner.do_action()
+    except runner.DaemonRunnerStopFailureError:
+        print myname,"is already stopped"
+    except lockfile.LockTimeout:
+            print "Another instance of %s is running" % myname
+            sys.exit()
