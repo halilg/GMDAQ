@@ -1,16 +1,21 @@
 # GMDAQ
 Data acquisition code for Arduino Geiger-Muller tube board
 
-The spi_rad_logger folder contains Ardunio code.
+spi_rad_logger folder contains Ardunio code for GM logger.
+report_pt_b folder contains Arduino code for environment sensors
 
-The DAQ code is meant to run on a Raspberry Pi.
+The DAQ code is meant to run on Ubuntu.
 
-Required the python modules:
+These python modules are required by the code:
 - pyserial (sudo apt-get install python-serial)
 - daemon (developed using python-daemon 2.0.5) (python-daemon): https://pypi.python.org/pypi/python-daemon
 
-(python setup.py install)
+# When you download and extract the tar.gz package for daemon, do this on linux: python setup.py install
 
-if you'll have empty serial port list: add yourself to the dialup group. Empty list may be due to permnission denied error.
+Log file is gmdaq.py.log. Everything is logged there.
+
+The code auto-detects the arduinos connected to the USB ports and starts logging them.
+
+If you'll have empty serial port list: (Ubuntu) Add yourself to the dialup group. Empty list is probably due to permission problems.
 
 
