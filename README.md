@@ -10,7 +10,7 @@ These python modules are required by the code:
 - pyserial (sudo apt-get install python-serial)
 - daemon (developed using python-daemon 2.0.5) (python-daemon): https://pypi.python.org/pypi/python-daemon
 
-# When you download and extract the tar.gz package for daemon, do this on linux: python setup.py install
+// When you download and extract the tar.gz package for daemon, do this on linux: python setup.py install
 
 Log file is gmdaq.py.log. Everything is logged there.
 
