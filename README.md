@@ -1,8 +1,8 @@
 # GMDAQ
 Data acquisition code for Arduino Geiger-Muller tube board
 
-spi_rad_logger folder contains Ardunio code for GM logger.
-report_pt_b folder contains Arduino code for environment sensors
+- spi_rad_logger folder contains Ardunio code for GM logger.
+- report_pt_b folder contains Arduino code for environment sensors
 
 The DAQ code is meant to run on Ubuntu.
 
