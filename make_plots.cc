@@ -99,10 +99,12 @@ int main(int argc, char **argv){
         h_hitspm1h.Fill(bmin);
     }
 
-    int scale=2;
+    float scale=1.5;
+    float xoffset=0.53;
+    float yoffset=0.15;
     TCanvas c("c", "c", scale*640,scale*480);
     h_hitspm1h.Draw("E");
-    TPaveText pt(.65,.85,.89,.89,"NBNDC");
+    TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());    
     pt.Draw();
     c.Print("last_hour.png");
