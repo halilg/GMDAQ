@@ -52,7 +52,7 @@ int main(int argc, char **argv){
     //}
     //Long64_t nevents = std::atoll(argv[1]);
     //    TH1D h_b1b2Mass("h_b1b2Mass","b1b2Mass; (GeV); Events", 50, 100, 250);
-    TH1I h_hitspm1h("h_hitspm1h","GM Hits per Minute (Last Hour); Minutes; Hits", 60, -59, 0);
+    TH1I h_hitspm1h("h_hitspm1h","GM Hits per Minute (last hour); Minutes; Hits", 60, -59, 0);
     //    TH1I h_nVertices("h_nVertices","nVertices; Vertices; Events", 50, 0, 50);,
     //h_hitspm1h.SetLabelFont(10*font+2);
     //h_hitspm1h.SetTitleFont(10*font+2);
