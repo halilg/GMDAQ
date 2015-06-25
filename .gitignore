@@ -55,3 +55,4 @@ gmdaq.pkl
 *.pid*
 *.dat
 *.MainThread-*
+*.db
