@@ -55,4 +55,7 @@ gmdaq.pkl
 *.pid*
 *.dat
 *.MainThread-*
-*.db
+*.dbi
+*.is
+*.hold
+
