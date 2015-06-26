@@ -2,7 +2,7 @@
 
 # Data acquisition daemon
 
-import serial,os,sys,datetime,time,uuid,pwd, platform#, psutil
+import serial, os, sys, datetime, time, uuid, pwd, platform, sqlite3#, psutil
 import logging, logging.handlers, lockfile, signal, threading
 from serial_ports import serial_ports
 from daemon import runner
@@ -20,10 +20,22 @@ class SerialComm(threading.Thread):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
+        
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.__serial=ser
         self.__ofname=dlogfile
-        self.__ofile=open(dlogfile,"w",0) # buffer size=0
+        
+        
+        self.__conn = sqlite3.connect(dlogfile)
+        self.__cursor = self.__conn.cursor()
+        if self.name == "GMLogger":
+            self.__cursor.execute("CREATE TABLE if not exists gm (epochms INTEGER, millis INTEGER)")
+        elif self.name == "EnvLogger":
+            self.__cursor.execute("CREATE TABLE if not exists env (epochms INTEGER, millis INTEGER)")
+
+
+        self.__cursor.execute("PRAGMA synchronous=OFF") #improves the write time about 1 ms (which is about 2ms)
+        #self.__ofile=open(dlogfile,"w",0) # buffer size=0
         self.__terminate=False
 
     def run(self):

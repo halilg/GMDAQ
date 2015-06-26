@@ -58,4 +58,4 @@ gmdaq.pkl
 *.dbi
 *.is
 *.hold
-
+*.db

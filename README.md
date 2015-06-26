@@ -18,4 +18,10 @@ The code auto-detects the arduinos connected to the USB ports and starts logging
 
 If you'll have empty serial port list: (Ubuntu) Add yourself to the dialup group. Empty list is probably due to permission problems.
 
+crontab entries:
+
+* * * * * test -e /home/halil/work/GMDAQ/maintenance.is || (/usr/bin/nice -n 20 /home/halil/work/GMDAQ/publish_plots.zsh)
+* * * * * test -e /home/halil/work/GMDAQ/maintenance.is && (cp /home/halil/work/GMDAQ/maintenance.png /home/halil/www/gmlog/last_hour.png)
+
+
 
