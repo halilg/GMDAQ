@@ -13,7 +13,7 @@ conn = sqlite3.connect('gm.db')
 c = conn.cursor()
 
 c.execute('SELECT * FROM gm')
-for (epoch, millis) in c.execute('SELECT * FROM gm'):
-        print epoch, millis
+for (epoch, data) in c.execute('SELECT * FROM LOG'):
+        print epoch, data
 
 c.close()

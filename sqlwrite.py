@@ -11,17 +11,17 @@ conn = sqlite3.connect('gm.db')
 #print "ROOT import time:", end-start
 
 c = conn.cursor()
-c.execute("CREATE TABLE if not exists gm (epochms INTEGER, millis INTEGER)")
+c.execute("CREATE TABLE if not exists LOG (epochms INTEGER, millis INTEGER)")
 c.execute("PRAGMA synchronous=OFF") #improves the write time about 1 ms (which is about 2ms)
 
 print "Write delay (ms):\n----------------------"
 try:
     for q in range(1000):
         epoch=time.time()*1000
-        millis=epoch
+        millis=str(epoch)
         
         start=time.time()*1000
-        cmd="INSERT INTO gm VALUES (%d, %d)" % (epoch, millis)
+        cmd="INSERT INTO LOG VALUES (%d, %s)" % (epoch, millis)
         
         c.execute(cmd)
         conn.commit()

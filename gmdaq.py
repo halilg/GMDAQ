@@ -10,7 +10,7 @@ from trivialDB import trivialDB
 
 SBAUD=115200
 DEBUG=False
-#DEBUG=True #Keeps the run number fixed
+DEBUG=True #Keeps the run number fixed
 
 sig_names = {1: 'SIGHUP', 2: 'SIGINT', 3: 'SIGQUIT', 4: 'SIGILL', 5: 'SIGTRAP', 6: 'SIGIOT', 7: 'SIGEMT', 8: 'SIGFPE', 9: 'SIGKILL', 10: 'SIGBUS', 11: 'SIGSEGV', 12: 'SIGSYS', 13: 'SIGPIPE', 14: 'SIGALRM', 15: 'SIGTERM', 16: 'SIGURG', 17: 'SIGSTOP', 18: 'SIGTSTP', 19: 'SIGCONT', 20: 'SIGCHLD', 21: 'SIGTTIN', 22: 'SIGTTOU', 23: 'SIGIO', 24: 'SIGXCPU', 25: 'SIGXFSZ', 26: 'SIGVTALRM', 27: 'SIGPROF', 28: 'SIGWINCH', 29: 'SIGINFO', 30: 'SIGUSR1', 31: 'SIGUSR2'}
 
@@ -24,45 +24,39 @@ class SerialComm(threading.Thread):
         self.__logger = logging.getLogger("%s.%s" % ( self.__module__, self.__class__.__name__ ))
         self.__serial=ser
         self.__ofname=dlogfile
-        
-        
+                
         self.__conn = sqlite3.connect(dlogfile)
         self.__cursor = self.__conn.cursor()
-        if self.name == "GMLogger":
-            self.__cursor.execute("CREATE TABLE if not exists gm (epochms INTEGER, millis INTEGER)")
-        elif self.name == "EnvLogger":
-            self.__cursor.execute("CREATE TABLE if not exists env (epochms INTEGER, millis INTEGER)")
-
-
+        self.__cursor.execute("CREATE TABLE if not exists LOG (epochms INTEGER, data text")
         self.__cursor.execute("PRAGMA synchronous=OFF") #improves the write time about 1 ms (which is about 2ms)
+        
         #self.__ofile=open(dlogfile,"w",0) # buffer size=0
         self.__terminate=False
 
     def run(self):
         self.__logger.info("Thread %1d starting: %s" % (self.threadID, self.name))
         self.__logger.info("Logging data to: %s" % self.__ofname)
-        #try:
         while not self.__terminate:
-                #self.__logger.info("Thread %1d self.__terminate: %d" % (self.threadID, self.__terminate))
-                data = self.__serial.readline().strip()
-                msecs=time.time()*1000
-                data = "%12d   %s\n" % (msecs, data) # time stamp
-                self.__ofile.write(data)
-        #except serial.SerialException:
-        #    pass
+            #self.__logger.info("Thread %1d self.__terminate: %d" % (self.threadID, self.__terminate))
+            data = self.__serial.readline().strip()
+            msecs=time.time()*1000
+            data = "%12d   %s\n" % (msecs, data) # time stamp
+            #self.__ofile.write(data)
+            cmd="INSERT INTO LOG VALUES (%d, %s)" % (epoch, data)
+            
+            self.__cursor.execute(cmd)
+            self.__conn.commit()                
         self.stop()
         self.__logger.info("Thread %1d exiting: %s" % (self.threadID, self.name))
     
     def stop(self):
         self.__terminate=True
         
-        if self.__ofile: self.__ofile.close()
-        self.__logger.debug("output file closed (%s)" % self.name)
+        if self.__conn: self.__conn.close()
+        self.__logger.debug("Database closed (%s)" % self.name)
         if self.__serial.isOpen():
             self.__serial.close()
-            self.__logger.debug("serial port closed (%s)" % self.name)
-            #raise serial.SerialException
-        #thread.exit()
+            self.__logger.debug("Serial port closed (%s)" % self.name)
 
 class App():
     # The class that is the daemon. Steers the things
