@@ -3,7 +3,12 @@
 import os, sys, time, random
 import sqlite3
 
-conn = sqlite3.connect('/home/halil/work/GMDAQ/data/env_00000.dat')
+fname = '/home/halil/work/GMDAQ/data/env_00000.dat'
+
+if len (sys.argv) > 1: fname = sys.argv[1]
+
+
+conn = sqlite3.connect(fname)
 
 #start=time.time()
 
