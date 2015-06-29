@@ -3,7 +3,7 @@
 import os, sys, time, random
 import sqlite3
 
-conn = sqlite3.connect('gm.db')
+conn = sqlite3.connect('/home/halil/work/GMDAQ/data/env_00000.dat')
 
 #start=time.time()
 
@@ -12,7 +12,7 @@ conn = sqlite3.connect('gm.db')
 
 c = conn.cursor()
 
-c.execute('SELECT * FROM gm')
+c.execute('SELECT * FROM LOG')
 for (epoch, data) in c.execute('SELECT * FROM LOG'):
         print epoch, data
 
