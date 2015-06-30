@@ -8,10 +8,10 @@ LROOT=`root-config --cflags --glibs`
 #LOTHER=-Qunused-arguments #use on mac os
 
 make_plots_sql.exe: make_plots_sql.o Makefile
-	$(CPP) make_plots_sql.o $(LROOT) $(LOTHER) -o $@
+	$(CPP) make_plots_sql.o $(LROOT) $(LOTHER) -lsqlite3 -o $@
 
 make_plots.exe: make_plots.o Makefile
-	$(CPP) make_plots.o $(LROOT) $(LOTHER) -lsqlite3 -o $@
+	$(CPP) make_plots.o $(LROOT) $(LOTHER) -o $@
 
 make_plots_sql.o: make_plots_sql.cc
 	$(CPP) -c make_plots_sql.cc $(CPPFLAGS) -o $@
