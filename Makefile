@@ -5,7 +5,11 @@ endif
 CPP=g++
 CPPFLAGS=-I. `root-config --cflags` -std=c++11
 LROOT=`root-config --cflags --glibs`
-#LOTHER=-Qunused-arguments #use on mac os
+LOTHER=
+
+ifeq ($(findstring Darwin, $(shell uname)), Darwin)
+  LOTHER=-Qunused-arguments #use on mac os to get rid of the warning message: "clang: warning: argument unused during compilation: '-pthread'"
+endif
 
 make_plots_sql.exe: make_plots_sql.o Makefile
 	$(CPP) make_plots_sql.o $(LROOT) $(LOTHER) -lsqlite3 -o $@
