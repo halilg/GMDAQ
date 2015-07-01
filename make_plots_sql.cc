@@ -8,6 +8,7 @@
 
 //ROOT References
 #include "TFile.h"
+#include "TTree.h"
 #include "TPaveText.h"
 #include "TStyle.h"
 #include "TCanvas.h"
@@ -50,7 +51,9 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName){
     //printf("\n");
     return 0;
 }
-  
+
+
+TFile *f;  
 int main(int argc, char **argv){
     sqlite3 *db;
     char *zErrMsg = 0;
