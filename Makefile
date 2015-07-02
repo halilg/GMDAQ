@@ -18,7 +18,7 @@ make_plots_sql.exe: make_plots_sql.o epoch_histo.o Makefile
 epoch_histo.o: epoch_histo.cxx
 	$(CPP) -c $^ $(CPPFLAGS) -o $@
 
-epoch_histo.cxx: epoch_histo.h #LinkDef.h
+epoch_histo.cxx: epoch_histo.h
 	@echo Generating dictionary..
 	rootcint -v -f $@ -c -p $^
 

@@ -95,9 +95,13 @@ ULong64_t millis;
 void read_root_file(string fname){    
     rootf = TFile::Open(fname.c_str(),"READ");
     rootMeta = (TTree*) rootf->Get("Meta");
+    rootData = (TTree*) rootf->Get("Data");
     rootMeta->SetBranchAddress("Run", &runNum);
     rootMeta->SetBranchAddress("LastHitMillis", &millis);
+    rootData->SetBranchAddress("gm",&minutescnt);
     rootMeta->GetEvent();
+    rootData->GetEvent();
+    dump_map();
     cout << "Run: " << runNum << ", lastmillis: " << millis << endl;
     rootf->Close();
     delete rootf;
@@ -126,7 +130,7 @@ int main(int argc, char **argv){
     string rfname("test.root");
     firstmilli = milliseconds_since_epoch;
     if (! fileExists(rfname) ) create_root_file("test.root");
-    //read_root_file(rfname);
+    else read_root_file(rfname);
     //return 0;
     
     if( argc!=2 ){
