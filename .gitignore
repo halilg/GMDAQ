@@ -59,3 +59,5 @@ gmdaq.pkl
 *.is
 *.hold
 *.db
+*.cxx
+*.pcm

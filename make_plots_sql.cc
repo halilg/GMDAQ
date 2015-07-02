@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <map>
 
 //ROOT References
 #include "TFile.h"
@@ -16,6 +17,7 @@
 
 #include <time.h>
 
+#include "epoch_histo.h"
 
 using namespace std;
 
@@ -30,11 +32,23 @@ const std::string currentDateTime(time_t now ) {
     return buf;
 }
 
+
 int cnt_hits=0;
 vector<int> mins;
 unsigned long milliseconds_since_epoch=0;
 unsigned long firstmilli=0;
-    
+epoch_histo minutescnt;
+epoch_histo hourscnt;
+epoch_histo dayscnt;
+
+void dump_map(){
+    for( epoch_histo::iterator ii=minutescnt.begin(); ii!=minutescnt.end(); ++ii){
+       cout << (*ii).first << ": " << (*ii).second << endl;
+   }
+
+}
+
+
 static int callback(void *NotUsed, int argc, char **argv, char **azColName){
     int i;
     ++cnt_hits;
@@ -42,13 +56,14 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName){
     for(i=0; i<argc; i++){
         //printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
         if (i==0){ //
-            milliseconds_since_epoch = stoll( argv[i] ? argv[i] : "NULL" );
+            milliseconds_since_epoch = stoll( argv[i] ? argv[i] : "-1" );
         }
         //cout << milliseconds_since_epoch << endl;
     }
     min = (milliseconds_since_epoch - firstmilli) / 60000; // convert to min elapsed. float-int conversion truncates.
     mins.push_back(min);
-    //printf("\n");
+    if (minutescnt.count(min)) ++minutescnt[min];
+    else minutescnt.insert({min, 0});
     return 0;
 }
 
@@ -72,16 +87,17 @@ bool fileExists(const std::string& filename)
 }
 
 TFile *rootf;
-TTree *roott;
+TTree *rootMeta;
+TTree *rootData;
 int runNum;
 ULong64_t millis;
 
 void read_root_file(string fname){    
     rootf = TFile::Open(fname.c_str(),"READ");
-    roott = (TTree*) rootf->Get("Meta");
-    roott->SetBranchAddress("Run", &runNum);
-    roott->SetBranchAddress("LastHitMillis", &millis);
-    roott->GetEvent();
+    rootMeta = (TTree*) rootf->Get("Meta");
+    rootMeta->SetBranchAddress("Run", &runNum);
+    rootMeta->SetBranchAddress("LastHitMillis", &millis);
+    rootMeta->GetEvent();
     cout << "Run: " << runNum << ", lastmillis: " << millis << endl;
     rootf->Close();
     delete rootf;
@@ -91,10 +107,12 @@ void create_root_file(string fname){
     runNum=-999;
     millis = 1435281044445;
     rootf = TFile::Open(fname.c_str(),"RECREATE");
-    roott = new TTree("Meta","Metadata");
-    roott->Branch("Run",&runNum);
-    roott->Branch("LastHitMillis",&millis,"LastHitMillis/l");
-    roott->Fill();
+    rootMeta = new TTree("Meta","Metadata");
+    rootData = new TTree("Data","Data");
+    rootMeta->Branch("Run",&runNum);
+    rootMeta->Branch("LastHitMillis",&millis,"LastHitMillis/l");
+    rootData->Branch("gm","std::map<ULong64_t,unsigned int>",&minutescnt);
+    rootMeta->Fill();
     rootf->Write();
     rootf->Close();
     delete rootf;
@@ -108,8 +126,8 @@ int main(int argc, char **argv){
     string rfname("test.root");
     firstmilli = milliseconds_since_epoch;
     if (! fileExists(rfname) ) create_root_file("test.root");
-    read_root_file(rfname);
-    return 0;
+    //read_root_file(rfname);
+    //return 0;
     
     if( argc!=2 ){
       fprintf(stderr, "Usage: %s <database file>\n", argv[0]);
@@ -124,7 +142,8 @@ int main(int argc, char **argv){
     
     
     
-    rc = sqlite3_exec(db, "SELECT * FROM log ORDER BY epochms DESC LIMIT 4000", callback, 0, &zErrMsg);
+    //rc = sqlite3_exec(db, "SELECT * FROM log ORDER BY epochms DESC LIMIT 4000", callback, 0, &zErrMsg);
+    rc = sqlite3_exec(db, "SELECT * FROM log ORDER BY epochms DESC", callback, 0, &zErrMsg);
     if( rc!=SQLITE_OK ){
       fprintf(stderr, "SQL error: %s\n", zErrMsg);
       sqlite3_free(zErrMsg);
@@ -132,8 +151,10 @@ int main(int argc, char **argv){
     
     cout << "minutes: " << mins.size() << endl ;
     int last_minute=mins.at(mins.size()-1);
-    for (int q=0; q<mins.size() ; q++ ) cout << mins.at(q)-last_minute << endl;
+    //for (int q=0; q<mins.size() ; q++ ) cout << mins.at(q)-last_minute << endl;
     sqlite3_close(db);
+    
+    //dump_map();
     cout << "nHits= " << cnt_hits << endl;
     return 0;
 }
