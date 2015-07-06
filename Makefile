@@ -12,6 +12,12 @@ ifeq ($(findstring Darwin, $(shell uname)), Darwin)
   FOTHER = -Qunused-arguments #use on mac os to get rid of the warning message: "clang: warning: argument unused during compilation: '-pthread'"
 endif
 
+tbrowser.exe: tbrowser.cc
+	$(CPP) $^ $(CPPFLAGS) $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
+
+rootrw.exe: rootrw.cc
+	$(CPP) $^ $(CPPFLAGS) $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
+	
 make_plots_sql.exe: make_plots_sql.o epoch_histo.o mylib.o Makefile
 	$(CPP) make_plots_sql.o epoch_histo.o mylib.o $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
 
