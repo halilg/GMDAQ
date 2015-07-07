@@ -1,7 +1,9 @@
 #include <sqlite3.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <cstdio>
+#include "epoch_histo.h"
 
 //https://www.sqlite.org/cintro.html
 //http://www.codeproject.com/Tips/378808/Accessing-a-SQLite-Database-with-Cplusplus
@@ -9,15 +11,19 @@
 //sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 // Any (modifying) SQL commands executed here are not committed until at the you call:
 //sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
-
+std::vector<int> mins;
 class sqlrw {
     private:
         sqlite3 *db;
         bool fileopened;
         static int cbMeta(void *, int, char **, char **);
         static int cbData(void *, int, char **, char **);
+        char *zErrMsg;
         
     public:
+        epoch_histo *minutescnt;
+        epoch_histo *hourscnt;
+        epoch_histo *dayscnt;
         static unsigned long lastepmilli;
         static int runNum;
         sqlrw();
@@ -31,6 +37,7 @@ class sqlrw {
         void setMin(int, int);
         int getMin(int);
         void incMin(int);
+        void readData(std::string);
 };
 
 sqlrw::sqlrw(){
@@ -54,11 +61,12 @@ int sqlrw::cbData(void *NotUsed, int argc, char **argv, char **azColName){
 }
 
 void sqlrw::resetMin(int){
-    char buff[100];    
+    char buff[100];
+    zErrMsg = 0;
     int rc = sqlite3_exec(db, "DELETE FROM Meta", cbMeta, 0, &zErrMsg);
     sprintf(buff, "INSERT INTO Meta VALUES ( %lu, %i)", lastepmilli, runNum);
     
-    int rc = sqlite3_exec(db, "SELECT * FROM Meta LIMIT 1", cbMeta, 0, &zErrMsg);
+    rc = sqlite3_exec(db, "SELECT * FROM Meta LIMIT 1", cbMeta, 0, &zErrMsg);
 }
 
 void sqlrw::setMin(int, int){
@@ -81,7 +89,7 @@ int sqlrw::cbMeta(void *NotUsed, int argc, char **argv, char **azColName){
 }
 
 void sqlrw::dump(string c=""){
-    char *zErrMsg = 0;
+    zErrMsg = 0;
     int rc = sqlite3_exec(db, "SELECT * FROM Meta LIMIT 1", cbMeta, 0, &zErrMsg);
     if( rc!=SQLITE_OK ){
         cout << "SQL error: " << zErrMsg << endl;
@@ -94,7 +102,7 @@ void sqlrw::dump(string c=""){
 
 void sqlrw::create(string fname){
     open(fname);
-    char *zErrMsg = 0;
+    zErrMsg = 0;
     int rc = sqlite3_exec(db, "CREATE TABLE if not exists Meta (epochms INTEGER, runNum INTEGER)", cbMeta, 0, &zErrMsg);
     rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoMin (epochmin INTEGER, count INTEGER)", cbMeta, 0, &zErrMsg);
 
@@ -123,7 +131,7 @@ void sqlrw::open(string fname){
 }
 
 void sqlrw::write(){
-    char *zErrMsg = 0;
+    zErrMsg = 0;
     char buff[100];
     
     int rc = sqlite3_exec(db, "DELETE FROM Meta", cbMeta, 0, &zErrMsg);
@@ -138,11 +146,57 @@ void sqlrw::close(){
     db=0;
 }
 
+void sqlrw::readData(string fname){
+    unsigned long milliseconds_since_epoch=0;
+    unsigned int min=0;
+    
+    bool isOpenDB = false;
+    if ( sqlite3_open(fname.c_str(), &db) == SQLITE_OK ){
+            isOpenDB = true;
+        }         
+    if (isOpenDB)cout << "open successful\n";
+    
+    sqlite3_stmt *statement;    
+
+    string query("SELECT * FROM log ORDER BY epochms DESC LIMIT 100");
+
+    if ( sqlite3_prepare(db, query.c_str(), -1, &statement, 0 ) == SQLITE_OK ) 
+    {
+        int ctotal = sqlite3_column_count(statement);
+        cout << "columns: " << ctotal << endl;
+        int res = 0;
+        --ctotal;
+
+        while ( 1 )         
+        {
+            res = sqlite3_step(statement);
+            if ( res == SQLITE_ROW ) {
+                milliseconds_since_epoch = stoll( (char*)sqlite3_column_text(statement, 0));
+                min = (milliseconds_since_epoch) / 60000; // convert to min. float-int conversion truncates.
+                mins.push_back(min);
+            }
+            
+            if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
+                cout << "done " << endl;
+                break;
+            }    
+        }
+        cout << "Read " << mins.size() << endl;
+    }
+    
+    
+    
+    
+    sqlite3_close(db);
+}
+
 
 unsigned long sqlrw::lastepmilli=0;
 int sqlrw::runNum=-1;
 int main(int argc, char **argv){
     sqlrw mysqlrw;
+    mysqlrw.readData("data/gm_00020.dat");
+    return 0;
     mysqlrw.create("test.dat");
     cout << "Opening DB" << endl;
     mysqlrw.open("test.dat");
