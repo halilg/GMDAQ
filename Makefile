@@ -12,7 +12,7 @@ ifeq ($(findstring Darwin, $(shell uname)), Darwin)
   FOTHER = -Qunused-arguments #use on mac os to get rid of the warning message: "clang: warning: argument unused during compilation: '-pthread'"
 endif
 
-sqlrw.exe: sqlrw.o #mylib.o
+sqlrw.exe: sqlrw.o mylib.o
 	$(CPP) $^ $(LROOT) $(LOTHER) $(FOTHER) -lsqlite3 -o $@
 
 sqlrw.o: sqlrw.cc

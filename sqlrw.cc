@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdio>
 #include "epoch_histo.h"
+#include "mylib.h"
 
 //https://www.sqlite.org/cintro.html
 //http://www.codeproject.com/Tips/378808/Accessing-a-SQLite-Database-with-Cplusplus
@@ -11,7 +12,7 @@
 //sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 // Any (modifying) SQL commands executed here are not committed until at the you call:
 //sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
-std::vector<int> mins;
+//std::vector<int> mins;
 class sqlrw {
     private:
         sqlite3 *db;
@@ -21,9 +22,9 @@ class sqlrw {
         char *zErrMsg;
         
     public:
-        epoch_histo *minutescnt;
-        epoch_histo *hourscnt;
-        epoch_histo *dayscnt;
+        epoch_histo minutescnt;
+        epoch_histo hourscnt;
+        epoch_histo dayscnt;
         static unsigned long lastepmilli;
         static int runNum;
         sqlrw();
@@ -154,7 +155,7 @@ void sqlrw::readData(string fname){
     if ( sqlite3_open(fname.c_str(), &db) == SQLITE_OK ){
             isOpenDB = true;
         }         
-    if (isOpenDB)cout << "open successful\n";
+    //if (isOpenDB)cout << "open successful\n";
     
     sqlite3_stmt *statement;    
 
@@ -163,7 +164,7 @@ void sqlrw::readData(string fname){
     if ( sqlite3_prepare(db, query.c_str(), -1, &statement, 0 ) == SQLITE_OK ) 
     {
         int ctotal = sqlite3_column_count(statement);
-        cout << "columns: " << ctotal << endl;
+        //cout << "columns: " << ctotal << endl;
         int res = 0;
         --ctotal;
 
@@ -173,7 +174,11 @@ void sqlrw::readData(string fname){
             if ( res == SQLITE_ROW ) {
                 milliseconds_since_epoch = stoll( (char*)sqlite3_column_text(statement, 0));
                 min = (milliseconds_since_epoch) / 60000; // convert to min. float-int conversion truncates.
-                mins.push_back(min);
+                //mins.push_back(min);
+                //cout << min; 
+                //cout << " " << minutescnt.count(min) << " " << minutescnt[min] << " here\n" ;
+                if (minutescnt.count(min)) ++minutescnt[min];
+                else minutescnt.insert({min, 1});
             }
             
             if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
@@ -181,7 +186,8 @@ void sqlrw::readData(string fname){
                 break;
             }    
         }
-        cout << "Read " << mins.size() << endl;
+        cout << "Current data in memory:\n";
+        dump_map(&minutescnt);
     }
     
     
