@@ -34,11 +34,10 @@ class sqlrw {
         void close();
         void dump(std::string);
         void write();
-        void resetMin(int);
         void setMin(int, int);
         int getMin(int);
         void incMin(int);
-        void readData(std::string);
+        void readGMHits(std::string);
 };
 
 sqlrw::sqlrw(){
@@ -48,34 +47,52 @@ sqlrw::sqlrw(){
 }
 
 sqlrw::~sqlrw(){
-    sqlite3_stmt *statement;    
+    sqlite3_close(db);
 }
 
 using namespace std;
 
 
-int sqlrw::cbData(void *NotUsed, int argc, char **argv, char **azColName){
-    //cout << (argc == 2) << endl;
-    //lastepmilli = stoll( argv[0] );
-    //runNum= stoi( argv[1] );
-    return 0;
-}
-
-void sqlrw::resetMin(int){
+void sqlrw::setMin(int min, int count){
+    sqlite3_stmt *statement;    
     char buff[100];
-    zErrMsg = 0;
-    int rc = sqlite3_exec(db, "DELETE FROM Meta", cbMeta, 0, &zErrMsg);
-    sprintf(buff, "INSERT INTO Meta VALUES ( %lu, %i)", lastepmilli, runNum);
+    int hitcount=-1;
+    sprintf(buff, "INSERT INTO HistoMin VALUES (%i,%i)", min, count);
+    //cout << buff << endl;
+    int res=sqlite3_prepare(db,buff,-1,&statement,0);
+    if(res==SQLITE_OK){
+        int res=sqlite3_step(statement);
+        sqlite3_finalize(statement);
+        //cout << "insert OK\n";
+    } else {
+        ;//cout << res << " : failed\n";
+    }    
+}
+
+int sqlrw::getMin(int min){
+    sqlite3_stmt *statement;    
+    char buff[100];
+    int hitcount=-1;
+    sprintf(buff, "SELECT * FROM HistoMin WHERE epochmin=%i", min);
     
-    rc = sqlite3_exec(db, "SELECT * FROM Meta LIMIT 1", cbMeta, 0, &zErrMsg);
-}
+    if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
+        int ctotal = sqlite3_column_count(statement);
+        //cout << "columns: " << ctotal << endl;
+        int res = 0;
 
-void sqlrw::setMin(int, int){
-    ;
-}
-
-int sqlrw::getMin(int){
-    return 0;
+        while ( 1 ){
+            res = sqlite3_step(statement);
+            if ( res == SQLITE_ROW ) {
+                hitcount = stoi( (char*)sqlite3_column_text(statement, 1));
+            }
+            
+            if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
+                //cout << "done " << endl;
+                break;
+            }    
+        }
+    }    
+    return hitcount;
 }
 
 void sqlrw::incMin(int){
@@ -147,7 +164,7 @@ void sqlrw::close(){
     db=0;
 }
 
-void sqlrw::readData(string fname){
+void sqlrw::readGMHits(string fname){
     unsigned long milliseconds_since_epoch=0;
     unsigned int min=0;
     
@@ -155,8 +172,6 @@ void sqlrw::readData(string fname){
     if ( sqlite3_open(fname.c_str(), &db) == SQLITE_OK ){
             isOpenDB = true;
         }         
-    //if (isOpenDB)cout << "open successful\n";
-    
     sqlite3_stmt *statement;    
 
     string query("SELECT * FROM log ORDER BY epochms DESC LIMIT 100");
@@ -168,15 +183,11 @@ void sqlrw::readData(string fname){
         int res = 0;
         --ctotal;
 
-        while ( 1 )         
-        {
+        while ( 1 ){
             res = sqlite3_step(statement);
             if ( res == SQLITE_ROW ) {
                 milliseconds_since_epoch = stoll( (char*)sqlite3_column_text(statement, 0));
-                min = (milliseconds_since_epoch) / 60000; // convert to min. float-int conversion truncates.
-                //mins.push_back(min);
-                //cout << min; 
-                //cout << " " << minutescnt.count(min) << " " << minutescnt[min] << " here\n" ;
+                min = (milliseconds_since_epoch) / 60000; // convert millis to minutes. float-int conversion truncates.
                 if (minutescnt.count(min)) ++minutescnt[min];
                 else minutescnt.insert({min, 1});
             }
@@ -189,10 +200,6 @@ void sqlrw::readData(string fname){
         cout << "Current data in memory:\n";
         dump_map(&minutescnt);
     }
-    
-    
-    
-    
     sqlite3_close(db);
 }
 
@@ -201,11 +208,15 @@ unsigned long sqlrw::lastepmilli=0;
 int sqlrw::runNum=-1;
 int main(int argc, char **argv){
     sqlrw mysqlrw;
-    mysqlrw.readData("data/gm_00020.dat");
-    return 0;
-    mysqlrw.create("test.dat");
-    cout << "Opening DB" << endl;
+    //mysqlrw.create("test.dat");
+    //mysqlrw.readGMHits("data/gm_00020.dat");
     mysqlrw.open("test.dat");
+    cout << "received:" << mysqlrw.getMin(1) << endl;
+    mysqlrw.setMin(1,2);
+    cout << "received:" << mysqlrw.getMin(1) << endl;
+    return 0;
+    cout << "Opening DB" << endl;
+    
     cout << "dumping \n";
     mysqlrw.dump();
     mysqlrw.close();
@@ -222,7 +233,6 @@ int main(int argc, char **argv){
     mysqlrw.close();
     mysqlrw.open("test.dat");
     mysqlrw.dump();
-    mysqlrw.resetMin(1);
     mysqlrw.setMin(1,10);
     mysqlrw.incMin(1);
     return 0;
