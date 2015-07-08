@@ -15,6 +15,12 @@ endif
 sqlrw.exe: sqlrw.o mylib.o
 	$(CPP) $^ $(LROOT) $(LOTHER) $(FOTHER) -lsqlite3 -o $@
 
+test:	testsqlrw
+
+testsqlrw: sqlrw.exe
+	#rm -f data/hist_00020.dat
+	./sqlrw.exe 20
+
 sqlrw.o: sqlrw.cc
 	$(CPP) -c $^ $(CPPFLAGS) $(FOTHER) -o $@
 
