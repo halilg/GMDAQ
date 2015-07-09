@@ -126,8 +126,8 @@ void sqlrw::incMin(int){
 void sqlrw::create(string fname){
     open(fname);
     zErrMsg = 0;
-    int rc = sqlite3_exec(db, "CREATE TABLE if not exists Meta (epochms INTEGER, runNum INTEGER)", cbMeta, 0, &zErrMsg);
-    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoMin (epochmin INTEGER, count INTEGER)", cbMeta, 0, &zErrMsg);
+    int rc = sqlite3_exec(db, "CREATE TABLE if not exists Meta (epochms INTEGER, runNum INTEGER)", NULL, 0, &zErrMsg);
+    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoMin (epochmin INTEGER, count INTEGER)", NULL, 0, &zErrMsg);
 
     if( rc!=SQLITE_OK ){
         cout << "SQL error: " << zErrMsg << endl;
