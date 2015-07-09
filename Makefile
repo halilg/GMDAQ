@@ -12,23 +12,17 @@ ifeq ($(findstring Darwin, $(shell uname)), Darwin)
   FOTHER = -Qunused-arguments #use on mac os to get rid of the warning message: "clang: warning: argument unused during compilation: '-pthread'"
 endif
 
-sqlrw.exe: sqlrw.o mylib.o
+make_sql_histos.exe: make_sql_histos.o mylib.o
 	$(CPP) $^ $(LROOT) $(LOTHER) $(FOTHER) -lsqlite3 -o $@
 
 test:	testsqlrw
 
-testsqlrw: sqlrw.exe
+testsqlrw: make_sql_histos.exe
 	#rm -f data/hist_00020.dat
-	./sqlrw.exe 20
+	./make_sql_histos.exe 20
 
-sqlrw.o: sqlrw.cc
+make_sql_histos.o: make_sql_histos.cc
 	$(CPP) -c $^ $(CPPFLAGS) $(FOTHER) -o $@
-
-#rootrw.exe: rootrw.o epoch_histo.o mylib.o
-#	$(CPP) $^ $(LROOT) $(LOTHER) $(FOTHER) -o $@
-#
-#rootrw.o: rootrw.cc
-#	$(CPP) -c $^ $(CPPFLAGS) $(FOTHER) -o $@
 
 tbrowser.exe: tbrowser.cc
 	$(CPP) $^ $(CPPFLAGS) $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
@@ -57,4 +51,4 @@ mylib.o: mylib.h mylib.cc
 
 
 clean:
-	rm *.o epoch_histo.cxx epoch_histo_rdict.pcm make_plots*.exe
+	rm -f *.o epoch_histo.cxx epoch_histo_rdict.pcm make_plots*.exe

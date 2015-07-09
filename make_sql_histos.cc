@@ -17,18 +17,13 @@ class sqlrw {
     private:
         sqlite3 *db;
         bool fileopened;
-        static int cbData(void *, int, char **, char **);
-        static int cbMeta(void *, int , char **, char **);
-
         char *zErrMsg;
         
-        
     public:
+        int logLevel;
         epoch_histo minutescnt;
         epoch_histo hourscnt;
         epoch_histo dayscnt;
-        //static unsigned long lastepmilli;
-        //static int runNum;
         sqlrw();
         ~sqlrw();
         void create(std::string);
@@ -38,7 +33,6 @@ class sqlrw {
         void readMeta();
         void setMin(int, int);
         int getMin(int);
-        void incMin(int);
         void readGMHits(std::string);
         sqlite3 * getDB(){return db;};
         void mergeMin();
@@ -50,6 +44,7 @@ sqlrw::sqlrw(){
     runNum=0;
     lastepmilli=-1;
     fileopened=false;
+    logLevel=0;
 }
 
 sqlrw::~sqlrw(){
@@ -59,13 +54,20 @@ sqlrw::~sqlrw(){
 using namespace std;
 
 void sqlrw::mergeMin(){
-    //dump_map(&minutescnt);
+    if (minutescnt.size() == 0){
+        if (logLevel) cout <<"No data to merge\n";
+        return;
+    }
+    
     int min, cnt;
-    cout << "Merging\n";
+    if (logLevel) cout << "Merging\n";
+    zErrMsg=0;
+    int rc = sqlite3_exec(db, "BEGIN TRANSACTION", NULL, 0, &zErrMsg);
+    if (zErrMsg) cout << "mergeMin failed (0): " << zErrMsg << endl;
     for( epoch_histo::iterator ii=minutescnt.begin(); ii!=minutescnt.end(); ++ii){
         min=(*ii).first;
         cnt=(*ii).second;
-        std::cout << min << ": " << cnt << std::endl;
+        if (logLevel>1) std::cout << min << ": " << cnt << std::endl;
         if (getMin(min) == -1){
             setMin(min,getMin(min)+cnt+1); // can to be optimized, row is checked twice
         } else {
@@ -73,6 +75,9 @@ void sqlrw::mergeMin(){
         }
         
     }
+    zErrMsg=0;
+    rc = sqlite3_exec(db, "END TRANSACTION", NULL, 0, &zErrMsg);
+    if (zErrMsg) cout << "mergeMin failed (1): " << zErrMsg << endl;
 }
 
 void sqlrw::setMin(int min, int count){
@@ -85,7 +90,6 @@ void sqlrw::setMin(int min, int count){
     } else { // update
         sprintf(buff, "UPDATE HistoMin set count=%i where epochmin=%i", count, min);
     }
-    //cout << buff << endl;
     int res=sqlite3_prepare(db,buff,-1,&statement,0);
     if(res==SQLITE_OK){
         int res=sqlite3_step(statement);
@@ -101,7 +105,6 @@ int sqlrw::getMin(int min){
     
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
         int ctotal = sqlite3_column_count(statement);
-        //cout << "columns: " << ctotal << endl;
         int res = 0;
 
         while ( 1 ){
@@ -111,16 +114,11 @@ int sqlrw::getMin(int min){
             }
             
             if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
-                //cout << "done " << endl;
                 break;
             }    
         }
     }    
     return hitcount;
-}
-
-void sqlrw::incMin(int){
-    ;
 }
 
 void sqlrw::create(string fname){
@@ -135,7 +133,7 @@ void sqlrw::create(string fname){
         close();
         return;
     }
-    cout << "Histogram database created: " << fname << endl;
+    if (logLevel) cout << "Histogram database created: " << fname << endl;
     close();
 }
 
@@ -150,13 +148,6 @@ void sqlrw::open(string fname){
     fileopened=true;
 }
 
-int sqlrw::cbMeta(void *NotUsed, int argc, char **argv, char **azColName){
-//    //cout << (argc == 2) << endl;
-//    lastepmilli = stoll( argv[0] );
-//    runNum= stoi( argv[1] );
-    return 0;
-}
-
 void sqlrw::writeMeta(){
     sqlite3_stmt *statement;    
     char buff[100];
@@ -165,7 +156,6 @@ void sqlrw::writeMeta(){
     sqlite3_exec(db,"DELETE FROM Meta",NULL,NULL,&zErrMsg);
     if (zErrMsg) cout << "writeMeta failed: " << zErrMsg << endl;
     sprintf(buff, "INSERT INTO Meta VALUES (%lu,%i)", lastepmilli, runNum);
-    cout << buff << endl;
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ){
         int res = sqlite3_step(statement);
         sqlite3_finalize(statement);
@@ -186,7 +176,6 @@ void sqlrw::readMeta(){
         if ( res == SQLITE_ROW ) {
             lastepmilli = stoll( (char*)sqlite3_column_text(statement, 0));
             runNum = stoi( (char*)sqlite3_column_text(statement, 1));
-            cout << "lastepp=" << sqlite3_column_text(statement, 0) << ", runNum=" << sqlite3_column_text(statement, 1) << endl;
         }
             
     }
@@ -213,8 +202,10 @@ void sqlrw::readGMHits(string fname){
     }
     
     int rows = 0;
-    sprintf(buff, "SELECT * FROM log WHERE epochms>%lu ORDER BY epochms ASC LIMIT 100", lastepmilli);
-    cout << buff << endl;
+    //string limit("LIMIT 100");
+    string limit("");
+    sprintf(buff, "SELECT * FROM log WHERE epochms>%lu ORDER BY epochms ASC %s", lastepmilli, limit.c_str());
+    //cout << buff << endl;
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
         int ctotal = sqlite3_column_count(statement);
         int res = 0;
@@ -230,14 +221,14 @@ void sqlrw::readGMHits(string fname){
             }
             
             if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
-                cout << rows << " GM hits read." << endl;
+                if (logLevel) cout << rows << " GM hits read." << endl;
                 break;
             }    
         }
     }
     sqlite3_finalize(statement);
     sqlite3_close(db);
-    cout << "GM data read. Records= " << rows << ", lastepmilli=" << lastepmilli << endl;
+    if (logLevel && rows > 0)cout << "GM data read. Records= " << rows << ", lastepmilli=" << lastepmilli << endl;
 }
 
 
@@ -280,6 +271,7 @@ int main(int argc, char **argv){
     //cout << gmdbfile << " -> " << dbname << endl;
 
     sqlrw mysqlrw;
+    mysqlrw.logLevel=0;
     
     // if the database file doen't exist, create
     if (! fileExists(dbname) ){ 
@@ -292,19 +284,18 @@ int main(int argc, char **argv){
     
     // Read GM data
     mysqlrw.open(dbname);
-    dumpTable(mysqlrw.getDB(),"Meta");
+    //dumpTable(mysqlrw.getDB(),"Meta");
     mysqlrw.readMeta();
-    cout << "Read metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
+    //cout << "Read metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
     mysqlrw.close();
     mysqlrw.readGMHits(gmdbfile);
     
     mysqlrw.open(dbname);
     mysqlrw.mergeMin();
-    cout << "lastepmilli=" << mysqlrw.lastepmilli << endl;
-    mysqlrw.close();
-    mysqlrw.open(dbname);
+    //cout << "lastepmilli=" << mysqlrw.lastepmilli << endl;
     mysqlrw.writeMeta();
-    cout << "Wrote metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
+    //cout << "Wrote metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
+    //dumpTable(mysqlrw.getDB(),"HistoMin");
     mysqlrw.close();
     return 0;
     //
