@@ -1,153 +1,129 @@
-#include <stdio.h>
-#include <sqlite3.h>
-
-#include <iostream>
-#include <fstream>
 #include <string>
+#include <iostream>
 #include <vector>
-#include <map>
+#include <sqlite3.h>
+#include "epoch_histo.h"
+#include "mylib.h"
 
 //ROOT References
 #include "TFile.h"
-#include "TTree.h"
-#include "TBranch.h"
 #include "TPaveText.h"
 #include "TStyle.h"
 #include "TCanvas.h"
 #include "TH1I.h"
 
-#include "epoch_histo.h"
-#include "mylib.h"
+#include <time.h>
 
 using namespace std;
 
-int cnt_hits=0;
-vector<int> mins;
-unsigned long milliseconds_since_epoch=0;
-unsigned long firstmilli=0;
-epoch_histo *minutescnt;
-epoch_histo *hourscnt;
-epoch_histo *dayscnt;
-
-static int callback(void *NotUsed, int argc, char **argv, char **azColName){
-    int i;
-    ++cnt_hits;
-    unsigned int min=0;
-    for(i=0; i<argc; i++){
-        //printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        if (i==0){ //
-            milliseconds_since_epoch = stoll( argv[i] ? argv[i] : "-1" );
-        }
-        //cout << milliseconds_since_epoch << endl;
-    }
-    min = (milliseconds_since_epoch - firstmilli) / 60000; // convert to min elapsed. float-int conversion truncates.
-    mins.push_back(min);
-    if (minutescnt->count(min)) ++(*minutescnt)[min];
-    else minutescnt->insert({min, 0});
-    return 0;
-}
-
-TFile *rootf;
-TTree *rootMeta;
-TTree *rootData;
-//TBranch *brRunNum;
-//TBranch *brMillis;
-//TBranch *brData;
-UInt_t runNum;
-ULong64_t millis;
-
-void create_root_file(string fname){
-    epoch_histo mhisto;
-    runNum=-999;
-    millis =-1;
-    
-    rootf = TFile::Open(fname.c_str(),"RECREATE");
-    rootMeta = new TTree("Meta","Metadata");
-    rootData = new TTree("Data","Data");
-    rootMeta->Branch("Run",&runNum,"runNum/i");
-    rootMeta->Branch("LastHitMillis", &millis,"millis/l");
-    rootData->Branch("gm",&mhisto);
-    
-    rootMeta->Fill();
-    rootData->Fill();
-    
-    rootf->Write();
-    rootf->Close();
-    delete rootf;
-    cout << "Root file created: " << fname << endl;
-}
-
-void prepare_root_file(string fname){
-    rootf = TFile::Open(fname.c_str(),"UPDATE");
-    rootMeta = (TTree*) rootf->Get("Meta");
-    rootData = (TTree*) rootf->Get("Data");
-    rootMeta->SetBranchAddress("Run", &runNum);
-    rootMeta->SetBranchAddress("LastHitMillis", &millis);
-    rootData->SetBranchAddress("gm",&minutescnt);
-    
-    rootMeta->GetEvent(0);
-    rootData->GetEvent(0);
-    cout << "ROOT File opened. Run: " << runNum << ", lastmillis: " << millis << endl;
-}
-
 int main(int argc, char **argv){
+    string hfile, line; 
+    int logLevel=1;
+    int mins_since_epoch, count;
+    epoch_histo minutescnt;
     sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-    //string rfname(argv[0]);
-    string rfname("test.root");
-    firstmilli = milliseconds_since_epoch;
-    if (! fileExists(rfname) ) create_root_file("test.root");
-    return 0;
-    if( argc!=2 ){
-      fprintf(stderr, "Usage: %s <database file>\n", argv[0]);
-      return(1);
+    //hfile="data/histo_00020.dat";
+    hfile="data/hist_00020.dat";
+    if (argc==2){
+        hfile=argv[1];
     }
-    rc = sqlite3_open(argv[1], &db);
-    if( rc ){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-      sqlite3_close(db);
-      return(1);
-    }
-    
-    // open ROOT file and set up the tree and branches
-    prepare_root_file(rfname);
-    
-    cout << "Current data in ROOT file:\n";
-    dump_map(minutescnt);
-    
-    // Go
-    rc = sqlite3_exec(db, "SELECT * FROM log ORDER BY epochms DESC LIMIT 100", callback, 0, &zErrMsg);
-    //rc = sqlite3_exec(db, "SELECT * FROM log ORDER BY epochms DESC", callback, 0, &zErrMsg);
+    cout << "Plotting:" << hfile << endl;
 
-    if( rc!=SQLITE_OK ){
-      cout << "SQL error: " << zErrMsg << endl;
-      sqlite3_free(zErrMsg);
-      rootf->Close();
-      delete rootf;
-      return 1;
+    gStyle->SetOptStat(0);
+    gStyle->SetPadTickY(1);
+    Int_t font = 8;
+    gStyle->SetTextFont(10*font+2);
+    TH1I h_hitspm1h("h_hitspm1h","GM Hits per Minute (last hour); Minutes; Hits", 60, -59, 0);
+
+    char buff[100];
+    sqlite3_stmt *statement;    
+    
+    if ( sqlite3_open(hfile.c_str(), &db) == SQLITE_OK ){
+            ;
+    } else {
+        cout << "Failed to open database: " << hfile << endl;
+        return 1;
     }
-        
-    cout << "here\n";
-    dump_map(minutescnt);
     
-    cout << "minutes: " << mins.size() << endl ;
-    int last_minute=mins.at(mins.size()-1);
-    //for (int q=0; q<mins.size() ; q++ ) cout << mins.at(q)-last_minute << endl;
+    int rows = 0;
+    sprintf(buff, "SELECT * FROM HistoMin ORDER BY epochmin DESC LIMIT 60");
+    //cout << buff << endl;
+    if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
+        int ctotal = sqlite3_column_count(statement);
+        int res = 0;
+        while ( 1 ){
+            res = sqlite3_step(statement);
+            if ( res == SQLITE_ROW ) {
+                mins_since_epoch = stoi( (char*)sqlite3_column_text(statement, 0));
+                count = stoi( (char*)sqlite3_column_text(statement, 1));
+                minutescnt.insert({mins_since_epoch, count});
+                ++rows;
+            }
+            
+            if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
+                if (logLevel) cout << rows << "Minute Counts read." << endl;
+                break;
+            }    
+        }
+    }
+    sqlite3_finalize(statement);
     sqlite3_close(db);
-    
-    cout << "nHits= " << cnt_hits << endl;
-    
-    
-    // Wrap-up
-    ++runNum;
-    //rootMeta->Fill();
-    //rootData->Fill();
-    rootf->Write();
-    rootf->Close();
-    delete rootf;
-    cout << "ROOT File closed. Run: " << runNum << ", lastmillis: " << millis << endl;
-    
+    if (logLevel && rows > 0)cout << "Minutes read. Records= " << rows << endl;
+
+    dump_map(&minutescnt);
+    //
+    //
+    //unsigned int cnthits = 0;
+    //
+    //unsigned long milliseconds_since_epoch;
+    //unsigned long firstmilli=0;
+    //
+    //cout << "Opening text file: " << rfile << endl;
+    //ifstream myfile (rfile);
+    //if (!myfile.is_open()) return 1; 
+    //getline (myfile,line);
+    //cout << line.substr(0,13) << endl;
+    //milliseconds_since_epoch = stoll(line);
+    //milliseconds_since_epoch *= 1000;
+    //firstmilli = milliseconds_since_epoch;
+    //int min;
+    //try{
+    //    while ( getline (myfile,line) ){ // 1430 387 170 .830
+    //        ++cnthits;
+    //            //20150430T124610   1430387170.83 561899392
+    //          
+    //          if ( line.size() == 0) break;
+    //          if ( !std::isdigit(line.at(0)) ) break;
+    //          //cout << '"' << line << '"' << endl;
+    //          milliseconds_since_epoch = stoll(line); // !!!!!!!!!! increase length to 13 for new data
+    //          //milliseconds_since_epoch *= 1000;
+    //          min = (milliseconds_since_epoch - firstmilli) / 60000; // convert to min elapsed. float-int conversion truncates.
+    //          //cout << min << endl;
+    //          mins.push_back(min);
+    //    }
+    //} catch (int param) { cout << "int exception"; }
+    //cout << "Histogramming\n";
+    //unsigned long lastsec = milliseconds_since_epoch / 1000;
+    //myfile.close();
+    //time_t t = static_cast<time_t>(lastsec);
+    //
+    //int lastmin = min, bmin;
+    //for (int i=mins.size()-1; i>-1; i--){
+    //    bmin=mins.at(i)-lastmin;
+    //    if ( bmin < -59 ) break;
+    //    //cout << i << ", " << bmin << endl;
+    //    h_hitspm1h.Fill(bmin);
+    //}
+    //
+    //float scale=1.5;
+    //float xoffset=0.53;
+    //float yoffset=0.15;
+    //TCanvas c("c", "c", scale*640,scale*480);
+    //h_hitspm1h.Draw("E");
+    //TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
+    //pt.AddText(currentDateTime(t).c_str());    
+    //pt.Draw();
+    //c.Print("last_hour.png");
+    //cout << cnthits << " hits analyzed\n";
     return 0;
 }
-
