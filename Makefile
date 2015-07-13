@@ -13,15 +13,20 @@ ifeq ($(findstring Darwin, $(shell uname)), Darwin)
 endif
 
 
-make_plots_sql.exe: make_plots_sql.o mylib.o Makefile
-	$(CPP) make_plots_sql.o mylib.o $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
+
+
+make_plots_sql.exe: make_plots_sql.o mylib.o sqlrw.o Makefile
+	$(CPP) make_plots_sql.o mylib.o sqlrw.o $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
 
 test:	testplots
 
 testplots:	make_plots_sql.exe
-	./make_plots_sql.exe
+	./make_plots_sql.exe 20
 
-make_sql_histos.exe: make_sql_histos.o mylib.o
+sqlrw.o: sqlrw.cc sqlrw.h
+	$(CPP) -c sqlrw.cc $(CPPFLAGS) $(FOTHER) -o $@
+
+make_sql_histos.exe: make_sql_histos.o mylib.o sqlrw.o
 	$(CPP) $^ $(LROOT) $(LOTHER) $(FOTHER) -lsqlite3 -o $@
 
 

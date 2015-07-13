@@ -4,6 +4,7 @@
 #include <sqlite3.h>
 #include "epoch_histo.h"
 #include "mylib.h"
+#include "sqlrw.h"
 
 //ROOT References
 #include "TFile.h"
@@ -18,24 +19,53 @@ using namespace std;
 
 int main(int argc, char **argv){
     string hfile, line; 
-    int logLevel=1;
+    int logLevel=0;
     int mins_since_epoch, count;
     epoch_histo minutescnt;
+    vector<int> mins;
     sqlite3 *db;
-    //hfile="data/histo_00020.dat";
-    hfile="data/hist_00020.dat";
-    if (argc==2){
-        hfile=argv[1];
+
+    if( argc!=2 ){
+        fprintf(stderr, "Usage: %s <run #>\n", argv[0]);
+        return(1);
     }
+    
+    // Get the run number
+    char buff[100];
+    int runnum=0;
+    try {
+        runnum=stoi(argv[1]);
+    } catch (std::exception &ex) {
+        //printf("M - %s\n", ex.what());
+        fprintf(stderr, "Usage: %s <run #>\n", argv[0]);
+        return 1;
+    }    
+    
+    //cout << "Run: " << runnum << endl;
+    //return 0;
+    //hfile="data/histo_00020.dat";
+        // Set the database file names
+    sprintf(buff, "data/hist_%05d.dat", runnum);
+    hfile=buff;
+    
     cout << "Plotting:" << hfile << endl;
 
+    // read metadata
+    sqlrw mysqlrw;
+    mysqlrw.logLevel=0;
+    mysqlrw.open(hfile);
+    //dumpTable(mysqlrw.getDB(),"Meta");
+    mysqlrw.readMeta();
+    //cout << "Read metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
+    mysqlrw.close();    
+    
     gStyle->SetOptStat(0);
     gStyle->SetPadTickY(1);
     Int_t font = 8;
     gStyle->SetTextFont(10*font+2);
     TH1I h_hitspm1h("h_hitspm1h","GM Hits per Minute (last hour); Minutes; Hits", 60, -59, 0);
 
-    char buff[100];
+    //buff[100]=0;
     sqlite3_stmt *statement;    
     
     if ( sqlite3_open(hfile.c_str(), &db) == SQLITE_OK ){
@@ -48,6 +78,7 @@ int main(int argc, char **argv){
     int rows = 0;
     sprintf(buff, "SELECT * FROM HistoMin ORDER BY epochmin DESC LIMIT 60");
     //cout << buff << endl;
+    mins.clear();
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
         int ctotal = sqlite3_column_count(statement);
         int res = 0;
@@ -57,6 +88,7 @@ int main(int argc, char **argv){
                 mins_since_epoch = stoi( (char*)sqlite3_column_text(statement, 0));
                 count = stoi( (char*)sqlite3_column_text(statement, 1));
                 minutescnt.insert({mins_since_epoch, count});
+                mins.push_back(count);
                 ++rows;
             }
             
@@ -70,12 +102,11 @@ int main(int argc, char **argv){
     sqlite3_close(db);
     if (logLevel && rows > 0)cout << "Minutes read. Records= " << rows << endl;
 
-    dump_map(&minutescnt);
+    //dump_map(&minutescnt);
     //
     //
     //unsigned int cnthits = 0;
     //
-    //unsigned long milliseconds_since_epoch;
     //unsigned long firstmilli=0;
     //
     //cout << "Opening text file: " << rfile << endl;
@@ -103,27 +134,29 @@ int main(int argc, char **argv){
     //    }
     //} catch (int param) { cout << "int exception"; }
     //cout << "Histogramming\n";
-    //unsigned long lastsec = milliseconds_since_epoch / 1000;
+    unsigned long milliseconds_since_epoch=mysqlrw.lastepmilli;    
+    unsigned long lastsec = milliseconds_since_epoch / 1000;
     //myfile.close();
-    //time_t t = static_cast<time_t>(lastsec);
+    time_t t = static_cast<time_t>(lastsec);
     //
     //int lastmin = min, bmin;
-    //for (int i=mins.size()-1; i>-1; i--){
-    //    bmin=mins.at(i)-lastmin;
-    //    if ( bmin < -59 ) break;
-    //    //cout << i << ", " << bmin << endl;
-    //    h_hitspm1h.Fill(bmin);
-    //}
+    for (int i=60; i>0; --i){
+        int count=mins.size() > 60-i ? mins.at(60-i) : 0;
+        //cout << mins.size() << "(size), i=" << i << " element=" << 60-i << " " << count << endl;        
+        h_hitspm1h.SetBinContent(i,count);
+        //cout << i << ", " << bmin << endl;
+        
+    }
     //
-    //float scale=1.5;
-    //float xoffset=0.53;
-    //float yoffset=0.15;
-    //TCanvas c("c", "c", scale*640,scale*480);
-    //h_hitspm1h.Draw("E");
-    //TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
-    //pt.AddText(currentDateTime(t).c_str());    
-    //pt.Draw();
-    //c.Print("last_hour.png");
+    float scale=1.5;
+    float xoffset=0.53;
+    float yoffset=0.15;
+    TCanvas c("c", "c", scale*640,scale*480);
+    h_hitspm1h.Draw("E");
+    TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
+    pt.AddText(currentDateTime(t).c_str());    
+    pt.Draw();
+    c.Print("last_hour.png");
     //cout << cnthits << " hits analyzed\n";
     return 0;
 }
