@@ -49,7 +49,8 @@ int main(int argc, char **argv){
     mysqlrw.logLevel=0;
     
     // if the database file doen't exist, create
-    if (! fileExists(dbname) ){ 
+    if (! fileExists(dbname) ){
+        cout << "Creating histograms database\n";
         mysqlrw.create(dbname);
         mysqlrw.open(dbname);
         mysqlrw.lastepmilli=0;
@@ -67,7 +68,7 @@ int main(int argc, char **argv){
     
     mysqlrw.open(dbname);
     mysqlrw.mergeMin();
-    //cout << "lastepmilli=" << mysqlrw.lastepmilli << endl;
+    cout << "lastepmilli=" << mysqlrw.lastepmilli << endl;
     mysqlrw.writeMeta();
     //cout << "Wrote metadata. lastepmilli=" << mysqlrw.lastepmilli << endl;
     //dumpTable(mysqlrw.getDB(),"HistoMin");

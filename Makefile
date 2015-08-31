@@ -23,6 +23,8 @@ test:	testplots
 testplots:	make_plots_sql.exe
 	./make_plots_sql.exe 20
 
+all: make_plots_sql.exe make_sql_histos.exe
+
 sqlrw.o: sqlrw.cc sqlrw.h
 	$(CPP) -c sqlrw.cc $(CPPFLAGS) $(FOTHER) -o $@
 

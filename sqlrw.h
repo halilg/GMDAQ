@@ -25,6 +25,8 @@ class sqlrw {
         void readMeta();
         void setMin(int, int);
         int getMin(int);
+        int getBin(int, const char *, const char *);
+        void setBin(int , int , const char * , const char * );
         void readGMHits(std::string);
         sqlite3 * getDB(){return db;};
         void mergeMin();

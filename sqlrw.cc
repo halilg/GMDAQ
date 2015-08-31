@@ -11,9 +11,6 @@
 //sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
 //std::vector<int> mins;
 
-
-
-
 sqlrw::sqlrw(){
     runNum=0;
     lastepmilli=-1;
@@ -55,14 +52,18 @@ void sqlrw::mergeMin(){
 }
 
 void sqlrw::setMin(int min, int count){
+    setBin(min, count, "HistoMin", "epochmin");
+}
+
+void sqlrw::setBin(int bin, int count, const char * histogram, const char * binname){
     sqlite3_stmt *statement;    
     int hitcount=-1;
     char buff[100];
     
-    if (getMin(min) == -1) { // new record
-        sprintf(buff, "INSERT INTO HistoMin VALUES (%i,%i)", min, count);
+    if (getMin(bin) == -1) { // new record
+        sprintf(buff, "INSERT INTO %s VALUES (%i,%i)", histogram, bin, count);
     } else { // update
-        sprintf(buff, "UPDATE HistoMin set count=%i where epochmin=%i", count, min);
+        sprintf(buff, "UPDATE %s set count=%i where %s=%i", histogram, count, binname, bin);
     }
     int res=sqlite3_prepare(db,buff,-1,&statement,0);
     if(res==SQLITE_OK){
@@ -72,11 +73,16 @@ void sqlrw::setMin(int min, int count){
 }
 
 int sqlrw::getMin(int min){
+    return getBin(min, "HistoMin", "epochmin");
+}
+
+
+int sqlrw::getBin(int bin, const char * histogram, const char * binname){
     sqlite3_stmt *statement;    
     char buff[100];
     int hitcount=-1;
-    sprintf(buff, "SELECT * FROM HistoMin WHERE epochmin=%i", min);
-    
+    sprintf(buff, "SELECT * FROM %s WHERE %s=%i", histogram, binname, bin);
+    //cout << buff << "\n";
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
         int ctotal = sqlite3_column_count(statement);
         int res = 0;
@@ -99,8 +105,10 @@ void sqlrw::create(string fname){
     open(fname);
     zErrMsg = 0;
     int rc = sqlite3_exec(db, "CREATE TABLE if not exists Meta (epochms INTEGER, runNum INTEGER)", NULL, 0, &zErrMsg);
-    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoMin (epochmin INTEGER, count INTEGER)", NULL, 0, &zErrMsg);
-
+    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoMin (epochmin INTEGER, count INTEGER)", NULL, 0, &zErrMsg); // the hits per minute histogram
+    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoHr (epochHr INTEGER, count INTEGER)", NULL, 0, &zErrMsg);   // the hits per hour histogram
+    rc = sqlite3_exec(db, "CREATE TABLE if not exists HistoDay (epochHr INTEGER, count INTEGER)", NULL, 0, &zErrMsg);   // the hits per hour histogram
+    
     if( rc!=SQLITE_OK ){
         cout << "SQL error: " << zErrMsg << endl;
         sqlite3_free(zErrMsg);
