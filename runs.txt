@@ -1,0 +1,2 @@
+run 20: dikey run
+run 22: normal
