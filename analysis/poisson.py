@@ -7,7 +7,7 @@ if __name__ == '__main__':
     c1=TCanvas()
     histo=TH1I("myhits","Hits;x;y",20,0,19)
     for interval in range(5, 30):
-        f=file("test_data/data_6e2d8108-725a-4ed3-add2-05a31e1af660.txt")
+        f=file("data/data_53101eb8-14f1-41ea-9248-6299fb64ba1a.txt")
         histo.Reset()
         t0=0
         count=0
