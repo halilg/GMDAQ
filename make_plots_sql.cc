@@ -152,6 +152,8 @@ int main(int argc, char **argv){
     float xoffset=0.53;
     float yoffset=0.15;
     TCanvas c("c", "c", scale*640,scale*480);
+    //h_hitspm1h.SetMaximum()
+    h_hitspm1h.SetMinimum(0);
     h_hitspm1h.Draw("E");
     TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());    
