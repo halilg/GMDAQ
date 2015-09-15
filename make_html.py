@@ -40,9 +40,9 @@ window.onload = function()
 </head>
 <body>
 <table>
-<tr> <td align='right'> Run #:</td> <td style="font-family:Courier"> %RUN% </td> </tr>
-<tr> <td align='right'> Hits:</td> <td style="font-family:Courier"> %HITS% </td> </tr>
-<tr> <td align='right'> Running for:</td> <td style="font-family:Courier"> %DAYS% days </td> </tr>
+<tr> <td align='right'> Run #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
+<tr> <td align='right'> Hits:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
+<tr> <td align='right'> Running for:</td> <td style="font-family:Courier; color:blue;"> %DAYS% days </td> </tr>
 </table>
  
 <!-- Started: %STARTED% <br/> -->
