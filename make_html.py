@@ -64,7 +64,6 @@ if __name__ == '__main__':
     dataDir="data"
     runnum=runs.whichRun()
     runsdata=runs.readRunsData(dataDir)
-    runnum=int(sys.argv[1])
     k="gm_%05d.dat" % runnum
     if not k in runsdata.keys():
         print "No such run:" , runnum
@@ -74,7 +73,7 @@ if __name__ == '__main__':
     start=runsdata[k][1]
     days=runsdata[k][3]
     
-    html=htmltemplate.replace("%RUN%", "%05d" % runnum).replace("%HITS%", str(hits)).replace("%STARTED%", str(start)).replace("%DAYS%", "%3.1f" %  days)
+    html=htmltemplate.replace("%RUN%", "%05d" % runnum).replace("%HITS%", str(hits)).replace("%STARTED%", str(start)).replace("%DAYS%", "%6.1f" %  days)
     of = file("index.html", "w")
     of.write(html)
     of.close()
