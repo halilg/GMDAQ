@@ -33,7 +33,7 @@ window.onload = function()
 }
 </script>
 <head>
-<title>GM Hits per Minute (last hour)</title>
+<title>Dakikalık Toplam GM Vuruşları (son bir saat)</title>
 <meta name="author" content="Halil Gamsizkan">
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
