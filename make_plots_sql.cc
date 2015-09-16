@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <sqlite3.h>
 #include "epoch_histo.h"
@@ -10,12 +11,158 @@
 #include "TFile.h"
 #include "TPaveText.h"
 #include "TStyle.h"
+//#include "GStyle.h"
 #include "TCanvas.h"
+#include "TGraph.h"
+#include "TFrame.h"
 #include "TH1I.h"
 
 #include <time.h>
 
+struct envdata{
+    unsigned long epmilli;
+    float data;
+};
+
 using namespace std;
+
+int make_env_plots(char * dbfname){
+    
+    int logLevel=1;
+    sqlite3 *db;
+    sqlite3_stmt *statement;    
+    char buff[100];
+    char * envbuff;
+    unsigned long epmilli;
+    envdata env_C[100];
+    envdata env_muT[100];
+    envdata env_hPa[100];
+    unsigned int i_env_C=-1;
+    unsigned int i_env_muT=-1;
+    unsigned int i_env_hPa=-1;
+    
+    if ( sqlite3_open(dbfname, &db) == SQLITE_OK ){
+            cout << "Opened: " << dbfname << endl;
+    } else {
+        cout << "Failed to open database: " << dbfname << endl;
+        return 1;
+    }
+    
+    int rows = 0;
+    sprintf(buff, "SELECT * FROM log ORDER BY epochms DESC LIMIT 144");
+    cout << buff << endl;
+    //return 0;
+    //mins.clear();
+    if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
+        int ctotal = sqlite3_column_count(statement);
+        int res = 0;
+        while ( 1 ){
+            res = sqlite3_step(statement);
+            if ( res == SQLITE_ROW ) {
+                epmilli = stoll( (char*)sqlite3_column_text(statement, 0));
+                envbuff = (char*)sqlite3_column_text(statement, 1);
+                //cout << epmilli << " " << envbuff << endl;
+                
+                istringstream iss(envbuff);
+                string s;
+                unsigned int cnt=0;
+                string data[3];
+                while ( getline( iss, s, ' ' ) ) {
+                  data[cnt]=s;
+                  ++cnt;
+                }
+                //cout << epmilli << " : " << data[0] << " " << data[1] << " " << data[2] << "\n";
+                switch(data[1].c_str()[0]){
+                    case 'm':
+                        ++i_env_muT;
+                        env_muT[i_env_muT].epmilli=epmilli;
+                        env_muT[i_env_muT].data=stof(data[2]);
+                        cout << env_muT[i_env_muT].epmilli << " : muT : " << env_muT[i_env_muT].data << "\n";
+                        break;
+                    case 'C':
+                        ++i_env_C;
+                        env_C[i_env_C].epmilli=epmilli;
+                        env_C[i_env_C].data=stof(data[2]);
+                        cout << env_C[i_env_C].epmilli << " : C (" << i_env_C << ") : " << env_C[i_env_C].data << " " << "\n";
+                        break;
+                    case 'h':
+                        ++i_env_hPa;
+                        env_hPa[i_env_hPa].epmilli=epmilli;
+                        env_hPa[i_env_hPa].data=stof(data[2]);
+                        cout << env_hPa[i_env_hPa].epmilli << " : hPa : " << env_hPa[i_env_hPa].data << "\n";
+                        break;
+                };
+
+                
+                
+                //count = stoi( (char*)sqlite3_column_text(statement, 1));
+                //minutescnt.insert({mins_since_epoch, count});
+                //mins.push_back(count);
+                ++rows;
+            }
+            
+            if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
+                if (logLevel) cout << rows << " environment readings." << endl;
+                break;
+            }    
+        }
+    }
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+    
+    // All data read to memory
+    // Draw the magnetic field graph
+    gStyle->SetOptStat(0);
+    gStyle->SetPadTickY(2);
+    TCanvas *c1 = new TCanvas("c1","A Simple Graph Example",200,10,700,500);
+
+    //c1->SetFillColor(42);
+    c1->SetGrid();
+    
+    const Int_t n = 48;
+    Double_t x[n], y[n], c[n], p[n];
+    for (Int_t i=0;i<n;i++) {
+      x[i] = double(-i/2);
+      y[i] = env_muT[n-i-1].data;
+      c[i] = env_C[n-i-1].data;
+      p[i] = env_hPa[n-i-1].data;
+      printf(" i: %i - n-i-1: %i - x[i]: %i - y[i]: %f \n",i, n-i-1,int(x[i]),y[i]);
+    }
+    TGraph *gr = new TGraph(n,x,y);
+    TGraph *grC = new TGraph(n,x,c);
+    TGraph *grP = new TGraph(n,x,p);
+    gr->SetMinimum(10);
+    gr->SetMaximum(90);
+    gr->SetLineColor(2);
+    gr->SetLineWidth(2);
+    gr->SetMarkerColor(4);
+    gr->SetMarkerStyle(21);
+    gr->SetTitle("Manyetik alan");
+    gr->GetXaxis()->SetTitle("Zaman (Saat)");
+    gr->GetYaxis()->SetTitle("B(muT)");
+    gr->Draw("ACP");
+    
+    // TCanvas::Update() draws the frame, after which one can change it
+    c1->Update();
+    c1->Print("muT_24h.pdf");
+    
+    //c1->Clear();
+    //gStyle->SetPadTickY(1);
+    grC->SetMinimum(15);
+    grC->SetMaximum(35);
+    grC->Draw("ACP");
+    c1->Print("C_24h.pdf");
+    
+    
+    grP->SetMinimum(950);
+    grP->SetMaximum(1050);
+    grP->Draw("ACP");
+    c1->Update();
+    c1->Print("hPa_24h.pdf");    
+    
+    
+    return 0;
+}
 
 int main(int argc, char **argv){
     string hfile, line; 
@@ -41,6 +188,13 @@ int main(int argc, char **argv){
         return 1;
     }    
     
+    sprintf(buff, "data/env_%05d.dat", runnum);
+    hfile=buff;
+    int temp=make_env_plots(buff);
+    cout << temp << endl;
+    return temp;
+    
+    
     //cout << "Run: " << runnum << endl;
     //return 0;
     //hfile="data/histo_00020.dat";
@@ -60,7 +214,7 @@ int main(int argc, char **argv){
     mysqlrw.close();    
     
     gStyle->SetOptStat(0);
-    gStyle->SetPadTickY(1);
+    gStyle->SetPadTickY(2);
     Int_t font = 8;
     gStyle->SetTextFont(10*font+2);
     TH1I h_hitspm1h("h_hitspm1h","Dakikalik Toplam GM Vuruslari (son bir saat); Dakika; Vurus Sayisi", 60, -59, 0);
