@@ -63,15 +63,15 @@ window.onload = function()
 if __name__ == '__main__':
     dataDir="data"
     runnum=runs.whichRun()
-    runsdata=runs.readRunsData(dataDir)
     k="gm_%05d.dat" % runnum
-    if not k in runsdata.keys():
+    try: rundata=runs.readRunData(os.path.join(dataDir,k))
+    except:
         print "No such run:" , runnum
         sys.exit(1)
     
-    hits=runsdata[k][0]
-    start=runsdata[k][1]
-    days=runsdata[k][3]
+    hits=rundata[0]
+    start=rundata[1]
+    days=rundata[3]
     
     html=htmltemplate.replace("%RUN%", "%05d" % runnum).replace("%HITS%", str(hits)).replace("%STARTED%", str(start)).replace("%DAYS%", "%6.1f" %  days)
     of = file("index.html", "w")

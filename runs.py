@@ -10,34 +10,53 @@ p = re.compile("gm_\d\d\d\d\d\.dat$", re.IGNORECASE)
 def epoch2DateTime(ep):
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ep))
 
+def getRowCount(con, table):
+    cur = con.cursor()
+    cur.execute("select count() from %s" % table)
+    alldata=cur.fetchall()
+    return alldata[0][0]
+
+def getFLepochMS(con, table):
+    # returns the first and last epochms in a db table
+    cur = con.cursor()
+    cur.execute("SELECT * FROM %s ORDER BY epochms ASC limit 1" % table)
+    firstepochms=cur.fetchall()[0][0]
+    cur.execute("SELECT * FROM %s ORDER BY epochms DESC limit 1" % table)
+    lastepochms=cur.fetchall()[0][0]
+    return firstepochms, lastepochms
+
+def readRunData(fname):
+    rundata = [-1, "?", "?", 0]
+    try:
+        con = sqlite3.connect(fname)
+        rowscnt=getRowCount(con, "log")
+        firstepochms, lastepochms=getFLepochMS(con, "log")
+        # print firstepochms, lastepochms
+        # continue
+        if rowscnt > 0:
+            rundata = [rowscnt, epoch2DateTime(firstepochms/1000.), epoch2DateTime(lastepochms/1000.), \
+                                (lastepochms-firstepochms)/1000./60./60./24.]
+        else:
+            rundata = [0, 'N/A', 'N/A', 0]
+        
+    except sqlite3.Error, e:
+        pass
+        
+    finally:
+        
+        if con:
+            con.close()
+    return rundata
+
 def readRunsData(dataDir):
     runsdata={}
     con=None
     files=os.listdir(dataDir)
     files=filter(p.match, files)
+    rowscnt=0
     for dbfile in files:
-        # print dbfile
-        runsdata[dbfile] = [-1, "?", "?", 0]
-        try:
-            con = sqlite3.connect(os.path.join(dataDir,dbfile))
-            cur = con.cursor()
-            # cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
-            # print(cur.fetchall())
-            cur.execute("SELECT * FROM log")
-            alldata=cur.fetchall()
-            if len(alldata) > 0:
-                runsdata[dbfile] = [len(alldata), epoch2DateTime(alldata[0][0]/1000.), epoch2DateTime(alldata[-1][0]/1000.), \
-                                    (alldata[-1][0]-alldata[0][0])/1000./60./60./24.]
-            else:
-                runsdata[dbfile] = [0, 'N/A', 'N/A', 0]
-            
-        except sqlite3.Error, e:
-            pass
-            
-        finally:
-            
-            if con:
-                con.close()
+        rundata=readRunData(os.path.join(dataDir,dbfile))
+        runsdata[dbfile]=rundata
     return runsdata
 
 def whichRun():
