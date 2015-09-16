@@ -36,13 +36,14 @@ window.onload = function()
 <title>GM Hits per Minute (last hour)</title>
 <meta name="author" content="Halil Gamsizkan">
 <meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="keywords" content="Geiger-Muller Counter, Geiger Sayacı, Cosmic Rays, Kozmik Işınlar, Muons, Müonlar, Physics, Fizik">
 </head>
 <body>
 <table>
-<tr> <td align='right'> Run #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
-<tr> <td align='right'> Hits:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
-<tr> <td align='right'> Running for:</td> <td style="font-family:Courier; color:blue;"> %DAYS% days </td> </tr>
+<tr> <td align='right'> Alış #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
+<tr> <td align='right'> Toplam GM Vuruş sayısı:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
+<tr> <td align='right'> Çalışma süresi (gün):</td> <td style="font-family:Courier; color:blue;"> %DAYS% </td> </tr>
 </table>
  
 <!-- Started: %STARTED% <br/> -->
