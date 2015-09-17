@@ -108,7 +108,8 @@ int make_env_plots(char * dbfname){
     if(logLevel==0) gROOT->ProcessLine( "gErrorIgnoreLevel = 1001;");
     gStyle->SetOptStat(0);
     gStyle->SetPadTickY(2);
-
+    Int_t font = 8;
+    gStyle->SetTextFont(10*font+2);
     float scale=1.5;
     float xoffset=0.53;
     float yoffset=0.15;
@@ -137,6 +138,7 @@ int make_env_plots(char * dbfname){
     time_t t = static_cast<time_t>(lastsec);
     TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());      
+    bool dispDT=true;
     
     TGraph *gr = new TGraph(n,x,y);
     TGraph *grC = new TGraph(n,x,c);
@@ -152,7 +154,7 @@ int make_env_plots(char * dbfname){
     gr->GetYaxis()->SetTitle("Manyetik Alan [#muT]");
 
     gr->Draw("ACP"); // ACP
-    //pt.Draw();    
+    if (dispDT) pt.Draw();    
     // TCanvas::Update() draws the frame, after which one can change it
     c1->Update();
     c1->Print("muT_24h.png");
@@ -169,7 +171,7 @@ int make_env_plots(char * dbfname){
     grC->GetXaxis()->SetTitle("Zaman [Saat]");
     grC->GetYaxis()->SetTitle("Sicaklik [^{o}C]");
     grC->Draw("ACP");
-    //pt.Draw();    
+    if (dispDT) pt.Draw();    
     c1->Print("C_24h.png");
     
     
@@ -183,7 +185,7 @@ int make_env_plots(char * dbfname){
     grP->GetXaxis()->SetTitle("Zaman [Saat]");
     grP->GetYaxis()->SetTitle("Atmosfer Basinci [hPa]");
     grP->Draw("ACP");
-    //pt.Draw();    
+    if (dispDT) pt.Draw();    
     c1->Update();
     c1->Print("hPa_24h.png");    
     return 0;
