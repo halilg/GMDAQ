@@ -42,7 +42,7 @@ window.onload = function()
 <body>
 <table>
 <tr> <td align='right'> Alış #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
-<tr> <td align='right'> Toplam süre (gün):</td> <td style="font-family:Courier; color:blue;"> %DAYS% </td> </tr>
+<tr> <td align='right'> Süre (gün):</td> <td style="font-family:Courier; color:blue;"> %DAYS% </td> </tr>
 <tr> <td align='right'> Toplam GM Vuruş sayısı:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
 </table>
  
