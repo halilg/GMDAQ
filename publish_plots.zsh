@@ -7,6 +7,6 @@ runnum=$(./runs.py -c)
 ./make_sql_histos.exe $runnum
 ./make_plots_sql.exe $runnum
 #./make_plots.exe data/gm_00019.txt || exit
-mv last_hour.png index.html $ODIR
+mv C_24h.png hPa_24h.png last_hour.png  muT_24h.png index.html $ODIR
 
 
