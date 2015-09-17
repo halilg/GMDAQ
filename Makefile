@@ -14,6 +14,11 @@ endif
 
 all: make_plots_sql.exe make_sql_histos.exe make_plots_env.exe
 
+test: make_plots_sql.exe make_plots_env.exe
+	./make_plots_sql.exe 20
+	./make_plots_env.exe 20
+	./make_html.py
+
 make_plots_env.exe: make_plots_env.o mylib.o sqlrw.o 
 	$(CPP) make_plots_env.o mylib.o sqlrw.o $(LROOT) $(LOTHER) -lsqlite3 $(FOTHER) -o $@
 

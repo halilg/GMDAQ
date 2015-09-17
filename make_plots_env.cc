@@ -16,7 +16,8 @@
 #include "TGraph.h"
 #include "TFrame.h"
 #include "TH1I.h"
-
+#include "TROOT.h"
+//#include "TRint.h"
 #include <time.h>
 
 struct envdata{
@@ -28,7 +29,7 @@ using namespace std;
 
 int make_env_plots(char * dbfname){
     
-    int logLevel=1;
+    int logLevel=0;
     sqlite3 *db;
     sqlite3_stmt *statement;    
     char buff[100];
@@ -90,11 +91,6 @@ int make_env_plots(char * dbfname){
                         break;
                 };
 
-                
-                
-                //count = stoi( (char*)sqlite3_column_text(statement, 1));
-                //minutescnt.insert({mins_since_epoch, count});
-                //mins.push_back(count);
                 ++rows;
             }
             
@@ -109,55 +105,87 @@ int make_env_plots(char * dbfname){
     
     // All data read to memory
     // Draw the magnetic field graph
+    if(logLevel==0) gROOT->ProcessLine( "gErrorIgnoreLevel = 1001;");
     gStyle->SetOptStat(0);
     gStyle->SetPadTickY(2);
-    TCanvas *c1 = new TCanvas("c1","A Simple Graph Example",200,10,700,500);
+
+    float scale=1.5;
+    float xoffset=0.53;
+    float yoffset=0.15;
+    //TCanvas c("c", "c", scale*640,scale*325);    
+    TCanvas *c1 = new TCanvas("c1","A Simple Graph Example",scale*640,scale*325);  
 
     //c1->SetFillColor(42);
     c1->SetGrid();
     
     const Int_t n = 48;
     Double_t x[n], y[n], c[n], p[n];
+    unsigned long t0=env_muT[0].epmilli;
+    //cout << t0 << endl;
+    long diff;
+    float hr;
     for (Int_t i=0;i<n;i++) {
-      x[i] = double(-i/2);
+      diff=env_muT[n-i-1].epmilli - t0;
+      hr=diff/1000/60/60.;
+      x[i] = hr; //env_muT[n-i-1].epmilli; //-t0)/3600000.0;
       y[i] = env_muT[n-i-1].data;
       c[i] = env_C[n-i-1].data;
       p[i] = env_hPa[n-i-1].data;
-      if(logLevel>1) printf(" i: %i - n-i-1: %i - x[i]: %i - y[i]: %f \n",i, n-i-1,int(x[i]),y[i]);
+      if(logLevel>1) printf(" i: %i - n-i-1: %i - x[i]: %f - y[i]: %f \n",i, n-i-1,x[i],y[i]);
     }
+    unsigned long lastsec = t0 / 1000;
+    time_t t = static_cast<time_t>(lastsec);
+    TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
+    pt.AddText(currentDateTime(t).c_str());      
+    
     TGraph *gr = new TGraph(n,x,y);
     TGraph *grC = new TGraph(n,x,c);
     TGraph *grP = new TGraph(n,x,p);
-    gr->SetMinimum(10);
-    gr->SetMaximum(90);
+    gr->SetMinimum(10); //10
+    gr->SetMaximum(90); //90
     gr->SetLineColor(2);
     gr->SetLineWidth(2);
     gr->SetMarkerColor(4);
     gr->SetMarkerStyle(21);
-    gr->SetTitle("Manyetik alan");
-    gr->GetXaxis()->SetTitle("Zaman (Saat)");
-    gr->GetYaxis()->SetTitle("B(muT)");
-    gr->Draw("ACP");
-    
+    gr->SetTitle("");
+    gr->GetXaxis()->SetTitle("Zaman [Saat]");
+    gr->GetYaxis()->SetTitle("Manyetik Alan [#muT]");
+
+    gr->Draw("ACP"); // ACP
+    //pt.Draw();    
     // TCanvas::Update() draws the frame, after which one can change it
     c1->Update();
-    c1->Print("muT_24h.pdf");
+    c1->Print("muT_24h.png");
     
     //c1->Clear();
     //gStyle->SetPadTickY(1);
     grC->SetMinimum(15);
     grC->SetMaximum(35);
+    grC->SetLineColor(2);
+    grC->SetLineWidth(2);
+    grC->SetMarkerColor(8);
+    grC->SetMarkerStyle(22);
+    grC->SetTitle("");
+    grC->GetXaxis()->SetTitle("Zaman [Saat]");
+    grC->GetYaxis()->SetTitle("Sicaklik [^{o}C]");
     grC->Draw("ACP");
-    c1->Print("C_24h.pdf");
+    //pt.Draw();    
+    c1->Print("C_24h.png");
     
     
     grP->SetMinimum(950);
     grP->SetMaximum(1050);
+    grP->SetLineColor(3);
+    grP->SetLineWidth(2);
+    grP->SetMarkerColor(6);
+    grP->SetMarkerStyle(23);
+    grP->SetTitle("");
+    grP->GetXaxis()->SetTitle("Zaman [Saat]");
+    grP->GetYaxis()->SetTitle("Atmosfer Basinci [hPa]");
     grP->Draw("ACP");
+    //pt.Draw();    
     c1->Update();
-    c1->Print("hPa_24h.pdf");    
-    
-    
+    c1->Print("hPa_24h.png");    
     return 0;
 }
 

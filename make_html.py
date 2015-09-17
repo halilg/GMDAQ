@@ -48,7 +48,10 @@ window.onload = function()
  
 <!-- Started: %STARTED% <br/> -->
  
-<img id="refresh" src="last_hour.png">
+<img id="refresh" src="last_hour.png"><br/>
+<img src="hPa_24h.png"><br/>
+<img src="C_24h.png"><br/>
+<img src="muT_24h.png">
 
 <hr>
 <!-- begin htmlcommentbox.com -->

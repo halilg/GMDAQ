@@ -70,7 +70,7 @@ int main(int argc, char **argv){
     gStyle->SetPadTickY(2);
     Int_t font = 8;
     gStyle->SetTextFont(10*font+2);
-    TH1I h_hitspm1h("h_hitspm1h","Dakikalik Toplam GM Vuruslari (son bir saat); Dakika; Vurus Sayisi", 60, -59, 0);
+    TH1I h_hitspm1h("h_hitspm1h","; Zaman [Dakika]; Vurus Sayisi", 60, -59, 0);
 
     //buff[100]=0;
     sqlite3_stmt *statement;    
