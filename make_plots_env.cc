@@ -175,7 +175,7 @@ int make_env_plots(char * dbfname){
     c1->Print("C_24h.png");
     
     
-    grP->SetMinimum(950);
+    grP->SetMinimum(980);
     grP->SetMaximum(1050);
     grP->SetLineColor(3);
     grP->SetLineWidth(2);
