@@ -29,7 +29,7 @@ using namespace std;
 
 int make_env_plots(char * dbfname){
     
-    int logLevel=2;
+    int logLevel=0;
     sqlite3 *db;
     sqlite3_stmt *statement;    
     char buff[100];
