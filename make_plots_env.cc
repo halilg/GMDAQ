@@ -29,7 +29,7 @@ using namespace std;
 
 int make_env_plots(char * dbfname){
     
-    int logLevel=0;
+    int logLevel=2;
     sqlite3 *db;
     sqlite3_stmt *statement;    
     char buff[100];
@@ -126,8 +126,16 @@ int make_env_plots(char * dbfname){
     long diff;
     float hr;
     for (Int_t i=0;i<n;i++) {
+      x[i] = 0;
+      y[i] = 0;
+      c[i] = 0;
+      p[i] = 0;
+    }
+    int m=n;
+    for (Int_t i=0;i<n;i++) {
       diff=env_muT[n-i-1].epmilli - t0;
       hr=diff/1000/60/60.;
+      if (hr< -48) continue;
       x[i] = hr; //env_muT[n-i-1].epmilli; //-t0)/3600000.0;
       y[i] = env_muT[n-i-1].data;
       c[i] = env_C[n-i-1].data;
@@ -140,9 +148,9 @@ int make_env_plots(char * dbfname){
     pt.AddText(currentDateTime(t).c_str());      
     bool dispDT=true;
     
-    TGraph *gr = new TGraph(n,x,y);
-    TGraph *grC = new TGraph(n,x,c);
-    TGraph *grP = new TGraph(n,x,p);
+    TGraph *gr = new TGraph(m,x,y);
+    TGraph *grC = new TGraph(m,x,c);
+    TGraph *grP = new TGraph(m,x,p);
     gr->SetMinimum(10); //10
     gr->SetMaximum(90); //90
     gr->SetLineColor(2);
