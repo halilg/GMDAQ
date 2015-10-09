@@ -38,7 +38,7 @@ window.onload = function()
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="keywords" content="Geiger-Muller Counter, Geiger Sayacı, Cosmic Rays, Kozmik Işınlar, Muons, Müonlar, Physics, Fizik">
-</head>
+</head>m
 <body>
 <table>
 <tr> <td align='right'> Alış #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
