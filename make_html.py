@@ -33,7 +33,7 @@ window.onload = function()
 }
 </script>
 <head>
-<title>Dakikalık Toplam GM Vuruşları (son bir saat)</title>
+<title>GM Vuruş Sayısı Kaydedici Verisi</title>
 <meta name="author" content="Halil Gamsizkan">
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -43,7 +43,7 @@ window.onload = function()
 <table>
 <tr> <td align='right'> Alış #:</td> <td style="font-family:Courier; color:blue;"> %RUN% </td> </tr>
 <tr> <td align='right'> Süre (gün):</td> <td style="font-family:Courier; color:blue;"> %DAYS% </td> </tr>
-<tr> <td align='right'> Toplam GM Vuruş sayısı:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
+<tr> <td align='right'> Toplam GM vuruş sayısı:</td> <td style="font-family:Courier; color:blue;"> %HITS% </td> </tr>
 </table>
  
 <!-- Started: %STARTED% <br/> -->
