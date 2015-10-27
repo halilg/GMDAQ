@@ -33,7 +33,7 @@ window.onload = function()
 }
 </script>
 <head>
-<title>GM Vuruş Sayısı Kaydedici Verisi</title>
+<title>GM Müon Sayıcı Verisi</title>
 <meta name="author" content="Halil Gamsizkan">
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
