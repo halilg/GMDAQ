@@ -157,7 +157,7 @@ int main(int argc, char **argv){
     //
     float scale=1.5;
     float xoffset=0.53;
-    float yoffset=0.15;
+    float yoffset=0.14;
     TCanvas c("c", "c", scale*640,scale*325);
     c.SetGrid();
     //h_hitspm1h.SetMaximum()
