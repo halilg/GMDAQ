@@ -29,7 +29,7 @@ using namespace std;
 
 int make_env_plots(char * dbfname){
     
-    int logLevel=0;
+    const int logLevel=0;
     sqlite3 *db;
     sqlite3_stmt *statement;    
     char buff[100];
@@ -38,9 +38,9 @@ int make_env_plots(char * dbfname){
     envdata env_C[100];
     envdata env_muT[100];
     envdata env_hPa[100];
-    unsigned int i_env_C=-1;
-    unsigned int i_env_muT=-1;
-    unsigned int i_env_hPa=-1;
+    unsigned int i_env_C=0;
+    unsigned int i_env_muT=0;
+    unsigned int i_env_hPa=0;
     
     if ( sqlite3_open(dbfname, &db) == SQLITE_OK ){
             if(logLevel) cout << "Opened: " << dbfname << endl;
@@ -51,6 +51,7 @@ int make_env_plots(char * dbfname){
     
     int rows = 0;
     sprintf(buff, "SELECT * FROM log ORDER BY epochms DESC LIMIT 144");
+    //sprintf(buff, "SELECT * FROM log ORDER BY epochms DESC LIMIT 60");
 
     if ( sqlite3_prepare(db, buff, -1, &statement, 0 ) == SQLITE_OK ) {
         int ctotal = sqlite3_column_count(statement);
@@ -72,34 +73,40 @@ int make_env_plots(char * dbfname){
                 //cout << epmilli << " : " << data[0] << " " << data[1] << " " << data[2] << "\n";
                 switch(data[1].c_str()[0]){
                     case 'm':
-                        ++i_env_muT;
                         env_muT[i_env_muT].epmilli=epmilli;
                         env_muT[i_env_muT].data=stof(data[2]);
                         if (logLevel>1) cout << env_muT[i_env_muT].epmilli << " : muT : " << env_muT[i_env_muT].data << "\n";
+                        ++i_env_muT;
                         break;
                     case 'C':
-                        ++i_env_C;
                         env_C[i_env_C].epmilli=epmilli;
                         env_C[i_env_C].data=stof(data[2]);
                         if(logLevel>1) cout << env_C[i_env_C].epmilli << " : C (" << i_env_C << ") : " << env_C[i_env_C].data << " " << "\n";
+                        ++i_env_C;
                         break;
                     case 'h':
-                        ++i_env_hPa;
+                        //cout << "i_env_hPa: " << i_env_hPa << endl;
                         env_hPa[i_env_hPa].epmilli=epmilli;
                         env_hPa[i_env_hPa].data=stof(data[2]);
                         if(logLevel>1) cout << env_hPa[i_env_hPa].epmilli << " : hPa : " << env_hPa[i_env_hPa].data << "\n";
+                        ++i_env_hPa;
                         break;
                 };
 
                 ++rows;
             }
-            
             if ( res == SQLITE_DONE || res==SQLITE_ERROR) {
-                if (logLevel) cout << rows << " environment readings." << endl;
+                if (logLevel>0) cout << rows << " environment readings." << endl;
                 break;
             }    
         }
+    } else {
+        sqlite3_finalize(statement);
+        sqlite3_close(db);
+        cout << "Problem reading db file, exiting\n";
+        return 1;
     }
+    
     sqlite3_finalize(statement);
     sqlite3_close(db);
     
@@ -119,7 +126,7 @@ int make_env_plots(char * dbfname){
     //c1->SetFillColor(42);
     c1->SetGrid();
     
-    const Int_t n = 48;
+    const Int_t n = i_env_hPa < 48 ? i_env_hPa : 48;
     Double_t x[n], y[n], c[n], p[n];
     unsigned long t0=env_muT[0].epmilli;
     //cout << t0 << endl;
@@ -135,7 +142,7 @@ int make_env_plots(char * dbfname){
     for (Int_t i=0;i<n;i++) {
       diff=env_muT[n-i-1].epmilli - t0;
       hr=diff/1000/60/60.;
-      if (hr< -48) continue;
+      if (hr< -n) continue;
       x[i] = hr; //env_muT[n-i-1].epmilli; //-t0)/3600000.0;
       y[i] = env_muT[n-i-1].data;
       c[i] = env_C[n-i-1].data;
