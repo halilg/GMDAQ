@@ -162,7 +162,7 @@ int main(int argc, char **argv){
     c.SetGrid();
     //h_hitspm1h.SetMaximum()
     h_hitspm1h.SetMinimum(0);
-    h_hitspm1h.Draw("E");
+    h_hitspm1h.Draw("");
     TPaveText pt(xoffset,yoffset,xoffset+.34,yoffset+.08,"NBNDC");
     pt.AddText(currentDateTime(t).c_str());    
     pt.Draw();
