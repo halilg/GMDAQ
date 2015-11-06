@@ -169,6 +169,8 @@ int make_env_plots(char * dbfname){
     gr->GetYaxis()->SetTitle("Manyetik Alan [#muT]");
 
     gr->Draw("ACP"); // ACP
+    gr->GetXaxis()->SetLimits(-24,0);
+    gr->Draw("ACP"); // ACP
     if (dispDT) pt.Draw();    
     // TCanvas::Update() draws the frame, after which one can change it
     c1->Update();
@@ -186,6 +188,9 @@ int make_env_plots(char * dbfname){
     grC->GetXaxis()->SetTitle("Zaman [Saat]");
     grC->GetYaxis()->SetTitle("Sicaklik [^{o}C]");
     grC->Draw("ACP");
+    grC->GetXaxis()->SetLimits(-24,0);
+    grC->Draw("ACP");
+    c1->Update();
     if (dispDT) pt.Draw();    
     c1->Print("C_24h.png");
     
@@ -199,6 +204,8 @@ int make_env_plots(char * dbfname){
     grP->SetTitle("");
     grP->GetXaxis()->SetTitle("Zaman [Saat]");
     grP->GetYaxis()->SetTitle("Atmosfer Basinci [hPa]");
+    grP->Draw("ACP");
+    grP->GetXaxis()->SetLimits(-24,0);
     grP->Draw("ACP");
     if (dispDT) pt.Draw();    
     c1->Update();
