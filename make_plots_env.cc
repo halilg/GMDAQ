@@ -209,7 +209,18 @@ int make_env_plots(char * dbfname){
     grP->Draw("ACP");
     if (dispDT) pt.Draw();    
     c1->Update();
-    c1->Print("hPa_24h.png");    
+    c1->Print("hPa_24h.png");
+    
+    // Make dual plot
+    //c1->Clear();
+    //gStyle->SetPadTickY(0);
+    //
+    //grC->Draw("ACP");
+    //grP->Draw("CP");
+    //c1->Modified();
+    //c1->Update();
+    //c1->Print("ChPa_24h.png");
+    
     return 0;
 }
 
