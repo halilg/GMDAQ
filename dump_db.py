@@ -24,15 +24,18 @@ if __name__ == '__main__':
         sys.exit()    
     
     else:
-        tables=tables[0]
-        print 'Table(s): ', ', '.join(tables)
+        # print 'Table(s): ', tables
+        print "Found",len(tables),"table(s)"
+        # tables=tables[0]
+        # print 'Table(s): ', ', '.join(tables)
 
     for table in tables:
+        table=table[0]
         print 'Dumping table:', table
         cursor.execute("SELECT * FROM %s" % table)
         rows=cursor.fetchall()
         for row in rows:
-            print row
+            print "  ",row
         
-        print 'Table had %s rows ' % len (rows)
+        print '   Table had %s rows ' % len (rows)
     con.close()
