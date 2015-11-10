@@ -25,11 +25,17 @@ class sqlrw {
         void readMeta();
         void setMin(int, int);
         int getMin(int);
+        void setHr(int, int);
+        int getHr(int);
+        void setDay(int, int);
+        int getDay(int);
+        
         int getBin(int, const char *, const char *);
         void setBin(int , int , const char * , const char * );
         void readGMHits(std::string);
         sqlite3 * getDB(){return db;};
         void mergeMin();
+        void mergeData(epoch_histo & counts, void (*setter)(int, int), void (*getter)(int));
         unsigned long lastepmilli;
         int runNum;
 };

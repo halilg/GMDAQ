@@ -24,12 +24,37 @@ sqlrw::~sqlrw(){
 
 using namespace std;
 
+void sqlrw::mergeData(epoch_histo & counts, void (*setter)(int, int), void (*getter)(int)){
+    if (counts.size() == 0){
+        if (logLevel) cout <<"No data to merge\n";
+        return;
+    }
+    int min, cnt;
+    if (logLevel) cout << "Merging\n";
+    zErrMsg=0;
+    int rc = sqlite3_exec(db, "BEGIN TRANSACTION", NULL, 0, &zErrMsg);
+    if (zErrMsg) cout << "mergeMin failed (0): " << zErrMsg << endl;
+    for( epoch_histo::iterator ii=counts.begin(); ii!=counts.end(); ++ii){
+        min=(*ii).first;
+        cnt=(*ii).second;
+        if (logLevel>1) std::cout << min << ": " << cnt << std::endl;
+        if ((*getter)(min) == -1){
+            (*setter)(min,(*getter)(min)+cnt+1); // can to be optimized, row is checked twice
+        } else {
+            *setter(min,*getter(min)+cnt); // can to be optimized, row is checked twice
+        }
+    }
+    zErrMsg=0;
+    rc = sqlite3_exec(db, "END TRANSACTION", NULL, 0, &zErrMsg);
+    if (zErrMsg) cout << "mergeMin failed (1): " << zErrMsg << endl;
+}
+
+
 void sqlrw::mergeMin(){
     if (minutescnt.size() == 0){
         if (logLevel) cout <<"No data to merge\n";
         return;
     }
-    
     int min, cnt;
     if (logLevel) cout << "Merging\n";
     zErrMsg=0;
@@ -44,7 +69,6 @@ void sqlrw::mergeMin(){
         } else {
             setMin(min,getMin(min)+cnt); // can to be optimized, row is checked twice
         }
-        
     }
     zErrMsg=0;
     rc = sqlite3_exec(db, "END TRANSACTION", NULL, 0, &zErrMsg);
@@ -53,6 +77,26 @@ void sqlrw::mergeMin(){
 
 void sqlrw::setMin(int min, int count){
     setBin(min, count, "HistoMin", "epochmin");
+}
+
+int sqlrw::getMin(int min){
+    return getBin(min, "HistoMin", "epochmin");
+}
+
+void sqlrw::setHr(int min, int count){
+    setBin(min, count, "HistoHr", "epochhr");
+}
+
+int sqlrw::getHr(int min){
+    return getBin(min, "HistoHr", "epochhr");
+}
+
+void sqlrw::setDay(int min, int count){
+    setBin(min, count, "HistoDay", "epochday");
+}
+
+int sqlrw::getDay(int min){
+    return getBin(min, "HistoDay", "epochday");
 }
 
 void sqlrw::setBin(int bin, int count, const char * histogram, const char * binname){
@@ -71,11 +115,6 @@ void sqlrw::setBin(int bin, int count, const char * histogram, const char * binn
         sqlite3_finalize(statement);
     } 
 }
-
-int sqlrw::getMin(int min){
-    return getBin(min, "HistoMin", "epochmin");
-}
-
 
 int sqlrw::getBin(int bin, const char * histogram, const char * binname){
     sqlite3_stmt *statement;    
